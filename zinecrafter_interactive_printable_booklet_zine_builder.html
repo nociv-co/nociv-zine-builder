@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZineCrafter // Interactive Printable Booklet & Zine Builder</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts for Zine Aesthetics -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;600;700;900&family=JetBrains+Mono:wght@400;600;800&family=Permanent+Marker&family=Playfair+Display:ital,wght@0,700;1,400&family=Special+Elite&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-studio: #0f0f12;
+            --card-dark: #18181c;
+            --card-border: #2a2a32;
+            --accent-gold: #d4af37;
+            --accent-gold-hover: #b89528;
+            --accent-crimson: #e63946;
+            --paper-cream: #faf7f0;
+            --paper-grid: #e2ded4;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-studio);
+            color: #e4e4e7;
+            overflow-x: hidden;
+        }
+
+        .font-mono-code { font-family: 'JetBrains Mono', monospace; }
+        .font-typewriter { font-family: 'Courier Prime', monospace; }
+        .font-marker { font-family: 'Permanent Marker', cursive; }
+        .font-serif-zine { font-family: 'Playfair Display', serif; }
+        .font-vintage { font-family: 'Special Elite', cursive; }
+
+        /* Tactile Studio Dark Card Aesthetics */
+        .studio-card {
+            background-color: var(--card-dark);
+            border: 1px solid var(--card-border);
+            border-radius: 0.75rem;
+        }
+
+        .studio-input {
+            background-color: #0b0b0d;
+            border: 1px solid #33333e;
+            color: #fff;
+            border-radius: 0.375rem;
+        }
+        .studio-input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        /* Gold Accent Buttons */
+        .btn-gold {
+            background-color: var(--accent-gold);
+            color: #0f0f12;
+            font-weight: 700;
+            transition: all 0.15s ease-in-out;
+        }
+        .btn-gold:hover {
+            background-color: var(--accent-gold-hover);
+            transform: translateY(-1px);
+        }
+
+        /* Tactile Paper Texture Patterns */
+        .paper-bg-plain { background-color: #ffffff; }
+        .paper-bg-cream { background-color: #faf6ee; }
+        .paper-bg-dark { background-color: #1a1a1a; color: #ffffff; }
+        
+        .paper-bg-grid {
+            background-color: #fbf9f4;
+            background-image: 
+                linear-gradient(to right, rgba(0,0,0,0.08) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0,0,0,0.08) 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
+
+        .paper-bg-dots {
+            background-color: #faf8f5;
+            background-image: radial-gradient(rgba(0, 0, 0, 0.15) 1px, transparent 1px);
+            background-size: 14px 14px;
+        }
+
+        .paper-bg-vintage {
+            background-color: #f3ebd9;
+            background-image: radial-gradient(#d6c6a5 15%, transparent 16%), radial-gradient(#d6c6a5 15%, transparent 16%);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+        }
+
+        /* Drop Shadow for Paper Pages */
+        .paper-shadow {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Drag handles & selection outline */
+        .element-selected {
+            outline: 2px dashed #d4af37 !important;
+            outline-offset: 2px;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f0f12; }
+        ::-webkit-scrollbar-thumb { background: #2a2a32; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3f3f4e; }
+
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            #app-container, #print-preview-modal, header, nav {
+                display: none !important;
+            }
+
+            #print-output-container {
+                display: block !important;
+                background: white !important;
+            }
+
+            .print-sheet {
+                page-break-after: always;
+                break-after: page;
+                width: 11in;
+                height: 8.5in;
+                box-sizing: border-box;
+                position: relative;
+                margin: 0 auto;
+                background: white !important;
+                overflow: hidden;
+            }
+
+            /* Force orientation to landscape on print */
+            @page {
+                size: letter landscape;
+                margin: 0;
+            }
+        }
+
+        #print-output-container {
+            display: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-amber-400 selection:text-black">
+
+    <header class="studio-card !rounded-none border-t-0 border-x-0 p-3 px-4 flex flex-wrap items-center justify-between z-30 gap-3 bg-[#121216]">
+        <div class="flex items-center space-x-3">
+            <div class="bg-amber-400 text-black px-2.5 py-1 font-mono-code font-black text-lg tracking-tighter rounded flex items-center gap-1.5 shadow">
+                <span>📖</span> ZINE-CRAFTER
+            </div>
+            <div class="hidden sm:block">
+                <h1 class="text-sm font-bold tracking-wide uppercase text-zinc-200">Printable Booklet Engine</h1>
+                <p class="text-[11px] font-mono-code text-zinc-400">Drag, Drop & Auto-Impose Mini Zines</p>
+            </div>
+        </div>
+
+        <!-- Format Preset Selector & Print Mode Toggles -->
+        <div class="flex items-center space-x-2 md:space-x-4">
+            
+            <!-- Preset Dropdown -->
+            <div class="flex items-center bg-[#0b0b0d] border border-zinc-700 rounded-md p-1 font-mono-code text-xs">
+                <span class="text-zinc-400 px-2 hidden md:inline">FORMAT:</span>
+                <select id="preset-select" onchange="changePreset(this.value)" class="bg-transparent text-amber-300 font-bold outline-none cursor-pointer py-1 pr-1">
+                    <option value="small">Small: 8-Page Single-Sheet Micro Zine</option>
+                    <option value="medium">Medium: 16-Page Pocket Booklet</option>
+                    <option value="large">Large: Half-Letter Saddle Stitch (8 Pages)</option>
+                </select>
+            </div>
+
+            <!-- Print Duplex Mode Toggle -->
+            <button onclick="toggleDuplex()" id="duplex-btn" class="px-3 py-1.5 rounded text-xs font-mono-code border border-zinc-700 bg-zinc-800 text-zinc-300 hover:text-white transition flex items-center gap-1.5">
+                <span id="duplex-icon">📄</span>
+                <span id="duplex-label">Single-Sided</span>
+            </button>
+
+            <!-- Navigation Tabs -->
+            <div class="flex bg-[#0b0b0d] p-1 rounded-md border border-zinc-800 text-xs font-medium">
+                <button onclick="switchTab('editor')" id="tab-btn-editor" class="px-3 py-1 rounded bg-amber-400 text-black font-bold transition">
+                    🎨 Page Workbench
+                </button>
+                <button onclick="switchTab('imposition')" id="tab-btn-imposition" class="px-3 py-1 rounded text-zinc-400 hover:text-zinc-200 transition">
+                    🖨️ Print Layout
+                </button>
+                <button onclick="switchTab('guide')" id="tab-btn-guide" class="px-3 py-1 rounded text-zinc-400 hover:text-zinc-200 transition">
+                    ✂️ Folding & Binding
+                </button>
+            </div>
+
+            <!-- Export / Print Button -->
+            <button onclick="openPrintModal()" class="btn-gold px-4 py-1.5 rounded text-xs font-mono-code flex items-center gap-1.5 shadow-lg">
+                <span>🖨️</span> PRINT BOOKLET
+            </button>
+        </div>
+    </header>
+
+    <div id="app-container" class="flex-1 flex overflow-hidden relative">
+
+        <!-- TAB 1: PAGE WORKBENCH / EDITOR -->
+        <div id="tab-editor" class="flex-1 flex flex-col lg:flex-row w-full overflow-hidden">
+            
+            <!-- LEFT TOOLBAR: Tools, Text, Stickers, Assets -->
+            <aside class="w-full lg:w-80 studio-card !rounded-none border-y-0 border-l-0 p-4 overflow-y-auto flex-shrink-0 z-10 space-y-5 bg-[#141419]">
+                
+                <!-- Section 1: Page Backgrounds & Textures -->
+                <div>
+                    <label class="block font-mono-code text-xs font-bold uppercase tracking-wider text-amber-400 mb-2">
+                        1. Paper Texture & Color
+                    </label>
+                    <div class="grid grid-cols-3 gap-2 text-xs font-mono-code">
+                        <button onclick="setPageTexture('plain')" class="p-2 border border-zinc-700 rounded bg-white text-black font-bold text-center hover:border-amber-400">Plain</button>
+                        <button onclick="setPageTexture('cream')" class="p-2 border border-zinc-700 rounded bg-[#faf6ee] text-black font-bold text-center hover:border-amber-400">Cream</button>
+                        <button onclick="setPageTexture('grid')" class="p-2 border border-zinc-700 rounded bg-stone-100 text-black text-center hover:border-amber-400">Grid</button>
+                        <button onclick="setPageTexture('dots')" class="p-2 border border-zinc-700 rounded bg-stone-100 text-black text-center hover:border-amber-400">Dots</button>
+                        <button onclick="setPageTexture('vintage')" class="p-2 border border-zinc-700 rounded bg-[#f3ebd9] text-black text-center hover:border-amber-400">Vintage</button>
+                        <button onclick="setPageTexture('dark')" class="p-2 border border-zinc-700 rounded bg-zinc-900 text-white text-center hover:border-amber-400">Dark</button>
+                    </div>
+                </div>
+
+                <!-- Section 2: Add Typography -->
+                <div class="border-t border-zinc-800 pt-4">
+                    <label class="block font-mono-code text-xs font-bold uppercase tracking-wider text-amber-400 mb-2">
+                        2. Add Text & Typography
+                    </label>
+                    <div class="space-y-2">
+                        <input type="text" id="text-input" placeholder="Enter headline or text..." class="w-full p-2 studio-input text-xs font-mono-code">
+                        
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <select id="font-family-select" class="studio-input p-1.5 text-xs">
+                                <option value="Permanent Marker">Marker Style</option>
+                                <option value="Courier Prime">Typewriter</option>
+                                <option value="Playfair Display">Serif Headline</option>
+                                <option value="Special Elite">Grungy Vintage</option>
+                                <option value="Inter">Clean Sans</option>
+                            </select>
+                            <input type="color" id="text-color-picker" value="#000000" class="w-full h-8 studio-input cursor-pointer p-1">
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <button onclick="addTextElement('heading')" class="flex-1 studio-card p-2 text-xs font-bold text-center hover:bg-zinc-800 text-amber-300">
+                                + Headline
+                            </button>
+                            <button onclick="addTextElement('body')" class="flex-1 studio-card p-2 text-xs font-bold text-center hover:bg-zinc-800 text-zinc-300">
+                                + Body Text
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Add Media & Images -->
+                <div class="border-t border-zinc-800 pt-4">
+                    <label class="block font-mono-code text-xs font-bold uppercase tracking-wider text-amber-400 mb-2">
+                        3. Add Custom Image
+                    </label>
+                    <div class="relative">
+                        <input type="file" id="image-upload" accept="image/*" onchange="handleImageUpload(event)" class="hidden">
+                        <button onclick="document.getElementById('image-upload').click()" class="w-full studio-card p-3 text-xs font-mono-code border-dashed border-zinc-600 hover:border-amber-400 text-zinc-300 hover:text-white flex flex-col items-center justify-center gap-1">
+                            <span class="text-base">🖼️ Upload Photo or Drawing</span>
+                            <span class="text-[10px] text-zinc-500">PNG, JPG, SVG, WebP supported</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Section 4: Zine Stickers & Stamps -->
+                <div class="border-t border-zinc-800 pt-4">
+                    <label class="block font-mono-code text-xs font-bold uppercase tracking-wider text-amber-400 mb-2">
+                        4. Zine Stamps & Stickers
+                    </label>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <button onclick="addSticker('issue')" class="studio-card p-2 text-left hover:border-amber-400 font-mono-code font-bold text-[11px] text-red-400">
+                            🏷️ ISSUE #1 STAMP
+                        </button>
+                        <button onclick="addSticker('limited')" class="studio-card p-2 text-left hover:border-amber-400 font-mono-code font-bold text-[11px] text-amber-400">
+                            ⭐ LIMITED ED.
+                        </button>
+                        <button onclick="addSticker('tape')" class="studio-card p-2 text-left hover:border-amber-400 font-mono-code font-bold text-[11px] text-yellow-200">
+                            🩹 MASKING TAPE
+                        </button>
+                        <button onclick="addSticker('barcode')" class="studio-card p-2 text-left hover:border-amber-400 font-mono-code font-bold text-[11px] text-zinc-300">
+                            ║▌║ BARCODE
+                        </button>
+                        <button onclick="addSticker('scribble')" class="studio-card p-2 text-left hover:border-amber-400 font-mono-code font-bold text-[11px] text-pink-400">
+                            🌀 SCRIBBLE
+                        </button>
+                        <button onclick="addSticker('secret')" class="studio-card p-2 text-left hover:border-amber-400 font-mono-code font-bold text-[11px] text-red-500">
+                            ⚠️ TOP SECRET
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Section 5: Page Quick Templates -->
+                <div class="border-t border-zinc-800 pt-4">
+                    <label class="block font-mono-code text-xs font-bold uppercase tracking-wider text-amber-400 mb-2">
+                        5. Quick Layout Templates
+                    </label>
+                    <div class="grid grid-cols-2 gap-2 text-xs font-mono-code">
+                        <button onclick="applyTemplate('cover')" class="studio-card p-1.5 text-center hover:bg-zinc-800 text-zinc-300">Bold Cover</button>
+                        <button onclick="applyTemplate('photo')" class="studio-card p-1.5 text-center hover:bg-zinc-800 text-zinc-300">Photo Focus</button>
+                        <button onclick="applyTemplate('column')" class="studio-card p-1.5 text-center hover:bg-zinc-800 text-zinc-300">Text Column</button>
+                        <button onclick="applyTemplate('backcover')" class="studio-card p-1.5 text-center hover:bg-zinc-800 text-zinc-300">Back Credits</button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- CENTER WORKBENCH: Active Page Canvas -->
+            <main class="flex-1 bg-[#0a0a0c] flex flex-col relative overflow-hidden items-center justify-center p-4">
+                
+                <!-- Floating Canvas Top Toolbar -->
+                <div class="absolute top-4 left-4 z-20 flex items-center space-x-2 bg-[#18181c] border border-zinc-800 p-1.5 rounded-lg shadow-xl font-mono-code text-xs">
+                    <span id="page-indicator" class="px-2 font-bold text-amber-400">PAGE 1 OF 8</span>
+                    <span class="text-zinc-600">|</span>
+                    <button onclick="duplicateCurrentPage()" class="px-2 py-1 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded">📋 Duplicate</button>
+                    <button onclick="clearCurrentPage()" class="px-2 py-1 text-red-400 hover:text-red-300 hover:bg-zinc-800 rounded">🗑️ Clear</button>
+                </div>
+
+                <!-- Floating Canvas Zoom & Selection Actions -->
+                <div class="absolute top-4 right-4 z-20 flex items-center space-x-2 bg-[#18181c] border border-zinc-800 p-1.5 rounded-lg shadow-xl font-mono-code text-xs">
+                    <button onclick="deleteSelectedElement()" id="btn-delete-el" class="hidden px-2 py-1 bg-red-900/60 text-red-200 hover:bg-red-800 rounded font-bold">
+                        Delete Selected Element ✖
+                    </button>
+                    <button onclick="adjustCanvasZoom(-0.1)" class="w-7 h-7 bg-zinc-800 hover:bg-zinc-700 rounded font-bold text-center">-</button>
+                    <span id="workbench-zoom-label" class="text-zinc-400 px-1">100%</span>
+                    <button onclick="adjustCanvasZoom(0.1)" class="w-7 h-7 bg-zinc-800 hover:bg-zinc-700 rounded font-bold text-center">+</button>
+                </div>
+
+                <!-- Canvas Page Frame Container -->
+                <div class="flex-1 w-full h-full flex items-center justify-center overflow-auto p-8">
+                    <div id="page-canvas-wrapper" class="relative transition-transform duration-150 origin-center">
+                        <!-- Canvas DOM Element -->
+                        <div id="page-canvas" class="paper-shadow relative overflow-hidden select-none transition-all duration-200 paper-bg-plain" style="width: 360px; height: 520px;">
+                            <!-- Dynamic Layered Elements rendered here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selected Element Controller Bar (Bottom) -->
+                <div id="element-controls" class="w-full max-w-xl bg-[#18181c] border border-zinc-800 p-2 px-4 rounded-xl shadow-2xl flex items-center justify-between text-xs font-mono-code hidden mb-2 z-20">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-amber-400 font-bold">EDITING ELEMENT</span>
+                        <div class="flex items-center space-x-1">
+                            <label class="text-zinc-400 text-[10px]">SIZE:</label>
+                            <input type="range" id="el-size-slider" min="12" max="72" value="24" oninput="updateSelectedElementSize(this.value)" class="w-20 accent-amber-400">
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <label class="text-zinc-400 text-[10px]">ROTATE:</label>
+                            <input type="range" id="el-rot-slider" min="-180" max="180" value="0" oninput="updateSelectedElementRotation(this.value)" class="w-20 accent-amber-400">
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="moveLayer('up')" class="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-200">Bring Forward</button>
+                        <button onclick="moveLayer('down')" class="px-2 py-0.5 bg-zinc-800 hover:bg-zinc-700 rounded text-zinc-200">Send Back</button>
+                    </div>
+                </div>
+
+            </main>
+
+            <!-- RIGHT SIDEBAR: Page Thumbnail Re-ordering Strip -->
+            <aside class="w-full lg:w-64 studio-card !rounded-none border-y-0 border-r-0 p-3 bg-[#141419] flex flex-col z-10">
+                <div class="flex justify-between items-center mb-3 pb-2 border-b border-zinc-800 font-mono-code">
+                    <span class="text-xs font-bold text-amber-400 uppercase">PAGES MANAGEMENT</span>
+                    <button onclick="addNewPage()" class="text-[11px] bg-zinc-800 hover:bg-amber-400 hover:text-black text-zinc-200 px-2 py-0.5 rounded transition">
+                        + Add Page
+                    </button>
+                </div>
+
+                <!-- Thumbnail Drag-and-Drop List -->
+                <div id="thumbnail-container" class="flex-1 overflow-y-auto space-y-3 pr-1">
+                    <!-- Dynamic Thumbnails Rendered via JS -->
+                </div>
+            </aside>
+        </div>
+
+        <!-- TAB 2: IMPOSITION PRINT LAYOUT PREVIEW -->
+        <div id="tab-imposition" class="flex-1 flex flex-col w-full bg-[#0a0a0c] overflow-hidden hidden">
+            
+            <!-- Imposition Options Sub-Header -->
+            <div class="bg-[#141419] border-b border-zinc-800 p-3 px-6 flex flex-wrap justify-between items-center gap-4 text-xs font-mono-code">
+                <div class="flex items-center space-x-4">
+                    <span class="text-amber-400 font-bold uppercase">IMPOSITION ENGINE PREVIEW</span>
+                    <label class="flex items-center space-x-2 cursor-pointer text-zinc-300">
+                        <input type="checkbox" id="toggle-folds" checked onchange="toggleImpositionGuide('folds', this.checked)" class="accent-amber-400">
+                        <span>Show Fold Lines (Dashed)</span>
+                    </label>
+                    <label class="flex items-center space-x-2 cursor-pointer text-zinc-300">
+                        <input type="checkbox" id="toggle-cuts" checked onchange="toggleImpositionGuide('cuts', this.checked)" class="accent-amber-400">
+                        <span>Show Slit / Cut Lines (Scissors)</span>
+                    </label>
+                </div>
+
+                <div class="flex items-center space-x-3">
+                    <span class="text-zinc-400 text-[11px]" id="sheet-count-info">1 Sheet Required (Standard Letter 8.5" x 11")</span>
+                    <button onclick="openPrintModal()" class="btn-gold px-3 py-1 rounded text-xs">
+                        🖨️ Open Fullsheet Print Preview
+                    </button>
+                </div>
+            </div>
+
+            <!-- Imposition Canvas Display -->
+            <div class="flex-1 overflow-auto p-8 flex flex-col items-center justify-start space-y-8">
+                
+                <div class="text-center max-w-xl text-zinc-400 text-xs font-mono-code mb-2">
+                    <p id="imposition-description-text">
+                        Standard 8-Page Single-Sheet Micro Zine layout. Top row pages (5, 6, 7, 8) are automatically inverted 180° so they align right-side up when folded along the hotdog crease!
+                    </p>
+                </div>
+
+                <!-- Print Sheet Previews rendered here -->
+                <div id="imposition-sheets-container" class="flex flex-col items-center space-y-8">
+                    <!-- Dynamic Sheet DOM generated via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: ASSEMBLY & BINDING GUIDE -->
+        <div id="tab-guide" class="flex-1 flex flex-col w-full bg-[#0a0a0c] overflow-y-auto p-6 md:p-10 hidden">
+            
+            <div class="max-w-4xl mx-auto space-y-8">
+                
+                <!-- Guide Header -->
+                <div class="studio-card p-6 bg-[#141419] border-amber-500/30">
+                    <h2 class="text-2xl font-black text-amber-400 mb-2 tracking-tight">
+                        ✂️ ZINE ASSEMBLY & BINDING MASTERCLASS
+                    </h2>
+                    <p class="text-sm text-zinc-300 font-mono-code leading-relaxed">
+                        Follow these simple physical steps to fold, cut, and bind your printed sheets into a finished handmade booklet. No fancy equipment required—just standard paper, scissors, and thread or staples!
+                    </p>
+                </div>
+
+                <!-- Step 1: Printing & Paper Setup -->
+                <div class="studio-card p-6 bg-[#141419]">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <span class="w-8 h-8 rounded-full bg-amber-400 text-black font-black flex items-center justify-center font-mono-code">1</span>
+                        <h3 class="text-lg font-bold text-white">Printing & Paper Selection</h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-zinc-300 font-mono-code">
+                        <div class="space-y-2 bg-[#0b0b0d] p-4 rounded-lg border border-zinc-800">
+                            <h4 class="font-bold text-amber-300 uppercase">📄 Paper Weight Recommendations:</h4>
+                            <ul class="list-disc pl-4 space-y-1 text-zinc-400">
+                                <li><strong class="text-zinc-200">Standard 20lb / 75gsm Copy Paper:</strong> Ideal for 8-page micro zines so folds remain crisp without excessive bulk.</li>
+                                <li><strong class="text-zinc-200">28lb / 105gsm Text Paper:</strong> Best for 16-page pocket booklets & saddle-stitched zines for rich opacity and durability.</li>
+                            </ul>
+                        </div>
+                        <div class="space-y-2 bg-[#0b0b0d] p-4 rounded-lg border border-zinc-800">
+                            <h4 class="font-bold text-amber-300 uppercase">⚠️ Printer Scaling Guardrail:</h4>
+                            <p class="text-zinc-400">
+                                Always set printer scaling to <strong class="text-amber-400">100% (Actual Size)</strong>. Do NOT select "Fit to Printable Area" as this distorts the center fold alignment.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: 8-Page Micro Zine Hotdog / Hamburger Folding Sequence -->
+                <div class="studio-card p-6 bg-[#141419]">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <span class="w-8 h-8 rounded-full bg-amber-400 text-black font-black flex items-center justify-center font-mono-code">2</span>
+                        <h3 class="text-lg font-bold text-white">8-Page Micro Zine Folding Sequence (Hotdog & Slit)</h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-mono-code">
+                        
+                        <div class="bg-[#0b0b0d] p-4 rounded-lg border border-zinc-800 flex flex-col items-center text-center space-y-3">
+                            <div class="w-24 h-16 border-2 border-dashed border-amber-400 flex items-center justify-center text-[10px] text-amber-300 bg-amber-400/10">
+                                Horizontal Fold
+                            </div>
+                            <span class="font-bold text-white">A. Hotdog Fold</span>
+                            <p class="text-[11px] text-zinc-400">Fold the printed sheet in half lengthwise (hotdog style), then open it back flat.</p>
+                        </div>
+
+                        <div class="bg-[#0b0b0d] p-4 rounded-lg border border-zinc-800 flex flex-col items-center text-center space-y-3">
+                            <div class="w-16 h-20 border-2 border-dashed border-amber-400 flex items-center justify-center text-[10px] text-amber-300 bg-amber-400/10">
+                                Vertical Folds
+                            </div>
+                            <span class="font-bold text-white">B. Hamburger Grid</span>
+                            <p class="text-[11px] text-zinc-400">Fold in half widthwise, then fold outer edges in to create an 8-panel grid.</p>
+                        </div>
+
+                        <div class="bg-[#0b0b0d] p-4 rounded-lg border border-zinc-800 flex flex-col items-center text-center space-y-3">
+                            <div class="w-20 h-16 border-2 border-red-500 flex items-center justify-center text-[10px] text-red-400 bg-red-500/10">
+                                ✂️ Slit Center
+                            </div>
+                            <span class="font-bold text-white">C. Center Slit Cut</span>
+                            <p class="text-[11px] text-zinc-400">Fold widthwise and cut along center horizontal line between middle 2 panels ONLY.</p>
+                        </div>
+
+                        <div class="bg-[#0b0b0d] p-4 rounded-lg border border-zinc-800 flex flex-col items-center text-center space-y-3">
+                            <div class="w-16 h-16 border-2 border-amber-400 flex items-center justify-center text-lg bg-amber-400/20">
+                                ✦ Starburst
+                            </div>
+                            <span class="font-bold text-white">D. Push & Collapse</span>
+                            <p class="text-[11px] text-zinc-400">Push ends together into a 4-point star shape, then wrap front cover over into booklet.</p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Step 3: Binding Options (Stapling vs 3-Hole Pamphlet Sewing) -->
+                <div class="studio-card p-6 bg-[#141419]">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <span class="w-8 h-8 rounded-full bg-amber-400 text-black font-black flex items-center justify-center font-mono-code">3</span>
+                        <h3 class="text-lg font-bold text-white">Binding Options for Medium & Large Booklets</h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs font-mono-code">
+                        
+                        <!-- Eraser Stapling Hack -->
+                        <div class="bg-[#0b0b0d] p-5 rounded-lg border border-zinc-800 space-y-3">
+                            <div class="flex items-center justify-between text-amber-400 font-bold">
+                                <span>METHOD 1: SADDLE STAPLING HACK</span>
+                                <span>📌</span>
+                            </div>
+                            <p class="text-zinc-300">
+                                Don't have a long-arm booklet stapler? Use a standard desk stapler + pink pencil eraser!
+                            </p>
+                            <ol class="list-decimal pl-4 space-y-1 text-zinc-400">
+                                <li>Open your standard stapler flat 180°.</li>
+                                <li>Place an eraser under the center spine line of your folded booklet.</li>
+                                <li>Press staple through spine into the eraser.</li>
+                                <li>Pull eraser off and manually fold staple prongs flat with your fingernail or coin!</li>
+                            </ol>
+                        </div>
+
+                        <!-- 3-Hole Pamphlet Stitch -->
+                        <div class="bg-[#0b0b0d] p-5 rounded-lg border border-zinc-800 space-y-3">
+                            <div class="flex items-center justify-between text-amber-400 font-bold">
+                                <span>METHOD 2: 3-HOLE PAMPHLET SEWING</span>
+                                <span>🪡</span>
+                            </div>
+                            <p class="text-zinc-300">
+                                Classic tactile bookbinding using thread, wax cord, or embroidery floss.
+                            </p>
+                            <ol class="list-decimal pl-4 space-y-1 text-zinc-400">
+                                <li>Poke 3 holes along center crease (Top, Middle, Bottom).</li>
+                                <li>Start needle through <strong>Middle</strong> hole from inside to outside.</li>
+                                <li>Go into <strong>Top</strong> hole, down past middle to <strong>Bottom</strong> hole.</li>
+                                <li>Re-enter through <strong>Middle</strong> hole and tie knot around long center thread loop!</li>
+                            </ol>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- PRINT PREVIEW MODAL BACKDROP -->
+    <div id="print-preview-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#141419] studio-card border-zinc-700 max-w-5xl w-full max-h-[90vh] flex flex-col shadow-2xl">
+            
+            <!-- Modal Header -->
+            <div class="bg-[#0b0b0d] p-4 px-6 border-b border-zinc-800 flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-bold text-amber-400 font-mono-code">FULLSHEET PRINT PREVIEW</h2>
+                    <p class="text-xs text-zinc-400 font-mono-code" id="modal-print-subtitle">Ready to print on Standard 8.5" x 11" Paper</p>
+                </div>
+                <button onclick="closePrintModal()" class="text-zinc-400 hover:text-white text-xl font-bold px-2">✕</button>
+            </div>
+
+            <!-- Modal Content (Scrollable Print Sheet Previews) -->
+            <div class="p-6 overflow-y-auto flex-1 bg-[#0a0a0c] space-y-6 flex flex-col items-center">
+                
+                <div class="bg-amber-400/10 border border-amber-400/30 p-3 rounded-lg text-xs font-mono-code text-amber-300 max-w-2xl text-center">
+                    💡 <strong>Print Tip:</strong> In your browser print dialog, select <strong>Landscape Orientation</strong> and set <strong>Scale to 100%</strong> (Do NOT choose "Fit to Printable Area").
+                </div>
+
+                <div id="modal-sheets-render" class="flex flex-col items-center space-y-8 w-full">
+                    <!-- Dynamic Sheet Previews -->
+                </div>
+            </div>
+
+            <!-- Modal Footer Actions -->
+            <div class="p-4 border-t border-zinc-800 bg-[#0b0b0d] flex justify-between items-center font-mono-code text-xs">
+                <button onclick="closePrintModal()" class="px-4 py-2 studio-card text-zinc-300 hover:text-white">
+                    Back to Editor
+                </button>
+                <button onclick="executeBrowserPrint()" class="btn-gold px-6 py-2 rounded font-bold shadow-lg">
+                    🖨️ PRINT TO PRINTER / SAVE PDF NOW
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Output Div populated only during browser print () -->
+    <div id="print-output-container"></div>
+
+    <script>
+        // Global State Store
+        const state = {
+            preset: 'small', // 'small' (8-page micro), 'medium' (16-page pocket), 'large' (half-letter saddle stitch)
+            isDuplex: false, // Single-sided vs Duplex
+            showFolds: true,
+            showCuts: true,
+            activeTab: 'editor',
+            currentPageIndex: 0,
+            zoom: 1.0,
+            selectedElementId: null,
+            draggedElement: null,
+            pages: []
+        };
+
+        // Preset Definitions & Dynamic Page Counts
+        const PRESETS = {
+            small: { name: '8-Page Micro Zine', pageCount: 8, sheetCount: 1, layout: '8-micro' },
+            medium: { name: '16-Page Pocket Booklet', pageCount: 16, sheetCount: 2, layout: '16-pocket' },
+            large: { name: 'Half-Letter Saddle Stitch', pageCount: 8, sheetCount: 2, layout: '8-saddle' }
+        };
+
+        // Initialize App on DOM Load
+        window.onload = function() {
+            initDefaultPages();
+            renderWorkbench();
+            renderThumbnails();
+            setupCanvasDragListeners();
+        };
+
+        // Initialize state with default starter zine template
+        function initDefaultPages() {
+            const count = PRESETS[state.preset].pageCount;
+            state.pages = [];
+            for (let i = 0; i < count; i++) {
+                state.pages.push(createEmptyPage(i + 1));
+            }
+
+            // Populating starter content for Cover & Inside pages
+            state.pages[0].elements = [
+                { id: 'el-1', type: 'text', text: 'MY FIRST ZINE', x: 20, y: 140, fontSize: 32, font: 'Permanent Marker', color: '#000000', rotation: -3, layer: 1 },
+                { id: 'el-2', type: 'sticker', variant: 'issue', text: 'ISSUE #1', x: 210, y: 30, fontSize: 16, font: 'JetBrains Mono', color: '#e63946', rotation: 12, layer: 2 },
+                { id: 'el-3', type: 'text', text: 'Created with ZineCrafter Engine', x: 40, y: 440, fontSize: 12, font: 'Courier Prime', color: '#555555', rotation: 0, layer: 3 }
+            ];
+
+            state.pages[1].elements = [
+                { id: 'el-20', type: 'text', text: 'MANIFESTO', x: 30, y: 40, fontSize: 24, font: 'Playfair Display', color: '#000000', rotation: 0, layer: 1 },
+                { id: 'el-21', type: 'text', text: 'Zines are handmade freedom.\nNo algorithms.\nNo permission needed.\nJust ink, paper & ideas.', x: 30, y: 110, fontSize: 14, font: 'Courier Prime', color: '#222222', rotation: 0, layer: 2 },
+                { id: 'el-22', type: 'sticker', variant: 'tape', text: '', x: 100, y: 15, fontSize: 12, font: 'Inter', color: '#000000', rotation: -5, layer: 3 }
+            ];
+
+            state.pages[7].elements = [
+                { id: 'el-80', type: 'text', text: 'BACK COVER', x: 80, y: 200, fontSize: 24, font: 'Permanent Marker', color: '#000000', rotation: 0, layer: 1 },
+                { id: 'el-81', type: 'sticker', variant: 'barcode', text: '', x: 110, y: 340, fontSize: 12, font: 'Inter', color: '#000000', rotation: 0, layer: 2 }
+            ];
+        }
+
+        function createEmptyPage(pageNumber) {
+            return {
+                id: 'page-' + pageNumber + '-' + Date.now() + Math.random().toString(36).substr(2, 4),
+                pageNumber: pageNumber,
+                texture: 'plain',
+                elements: []
+            };
+        }
+
+        // Change Booklet Format Preset
+        function changePreset(presetKey) {
+            state.preset = presetKey;
+            const targetCount = PRESETS[presetKey].pageCount;
+            
+            // Adjust pages array length
+            if (state.pages.length < targetCount) {
+                const addCount = targetCount - state.pages.length;
+                for (let i = 0; i < addCount; i++) {
+                    state.pages.push(createEmptyPage(state.pages.length + 1));
+                }
+            } else if (state.pages.length > targetCount) {
+                state.pages = state.pages.slice(0, targetCount);
+            }
+
+            // Update page numbers
+            state.pages.forEach((p, idx) => p.pageNumber = idx + 1);
+            if (state.currentPageIndex >= targetCount) state.currentPageIndex = 0;
+
+            renderWorkbench();
+            renderThumbnails();
+            if (state.activeTab === 'imposition') renderImpositionView();
+        }
+
+        // Toggle Single-Sided vs Duplex Mode
+        function toggleDuplex() {
+            state.isDuplex = !state.isDuplex;
+            const label = document.getElementById('duplex-label');
+            const icon = document.getElementById('duplex-icon');
+            if (state.isDuplex) {
+                label.textContent = "Double-Sided (Duplex)";
+                icon.textContent = "📄📄";
+            } else {
+                label.textContent = "Single-Sided";
+                icon.textContent = "📄";
+            }
+            if (state.activeTab === 'imposition') renderImpositionView();
+        }
+
+        // Tab Switching Logic
+        function switchTab(tabKey) {
+            state.activeTab = tabKey;
+            ['editor', 'imposition', 'guide'].forEach(t => {
+                const btn = document.getElementById(`tab-btn-${t}`);
+                const view = document.getElementById(`tab-${t}`);
+                if (t === tabKey) {
+                    btn.className = "px-3 py-1 rounded bg-amber-400 text-black font-bold transition";
+                    view.classList.remove('hidden');
+                } else {
+                    btn.className = "px-3 py-1 rounded text-zinc-400 hover:text-zinc-200 transition";
+                    view.classList.add('hidden');
+                }
+            });
+
+            if (tabKey === 'imposition') {
+                renderImpositionView();
+            }
+        }
+
+        // Render Active Page Workbench Canvas
+        function renderWorkbench() {
+            const page = state.pages[state.currentPageIndex];
+            if (!page) return;
+
+            // Update Page Indicator Header
+            document.getElementById('page-indicator').textContent = `PAGE ${page.pageNumber} OF ${state.pages.length}`;
+
+            const canvas = document.getElementById('page-canvas');
+            canvas.className = `paper-shadow relative overflow-hidden select-none transition-all duration-200 paper-bg-${page.texture}`;
+            canvas.innerHTML = ''; // Reset canvas content
+
+            // Render Page Number Watermark
+            const watermark = document.createElement('div');
+            watermark.className = "absolute bottom-2 right-3 font-mono-code text-[10px] opacity-30 pointer-events-none select-none text-black font-bold";
+            watermark.textContent = `P. ${page.pageNumber}`;
+            canvas.appendChild(watermark);
+
+            // Render Page Elements
+            page.elements.forEach(el => {
+                const elDom = document.createElement('div');
+                elDom.id = el.id;
+                elDom.className = `absolute cursor-move select-none ${state.selectedElementId === el.id ? 'element-selected' : ''}`;
+                elDom.style.left = `${el.x}px`;
+                elDom.style.top = `${el.y}px`;
+                elDom.style.transform = `rotate(${el.rotation || 0}deg)`;
+                elDom.style.zIndex = el.layer || 1;
+
+                if (el.type === 'text') {
+                    elDom.style.fontFamily = `'${el.font}', sans-serif`;
+                    elDom.style.fontSize = `${el.fontSize}px`;
+                    elDom.style.color = el.color;
+                    elDom.style.whiteSpace = 'pre-wrap';
+                    elDom.style.lineHeight = '1.2';
+                    elDom.textContent = el.text;
+                } else if (el.type === 'image') {
+                    const img = document.createElement('img');
+                    img.src = el.src;
+                    img.style.width = `${el.width || 180}px`;
+                    img.style.pointerEvents = 'none';
+                    img.className = 'rounded shadow-sm';
+                    elDom.appendChild(img);
+                } else if (el.type === 'sticker') {
+                    renderStickerDOM(elDom, el);
+                }
+
+                // Selection Event
+                elDom.onclick = (e) => {
+                    e.stopPropagation();
+                    selectElement(el.id);
+                };
+
+                canvas.appendChild(elDom);
+            });
+
+            // Deselect on clicking empty canvas
+            canvas.onclick = () => {
+                selectElement(null);
+            };
+
+            updateElementControlsUI();
+        }
+
+        // Render Sticker Styles
+        function renderStickerDOM(parentEl, el) {
+            if (el.variant === 'issue') {
+                parentEl.className += " border-2 border-red-600 px-2 py-0.5 font-mono-code font-black text-red-600 bg-red-100/80 tracking-widest uppercase shadow-sm";
+                parentEl.textContent = el.text || "ISSUE #1";
+            } else if (el.variant === 'limited') {
+                parentEl.className += " bg-amber-400 text-black px-2 py-1 font-mono-code font-black text-xs uppercase shadow-md flex items-center gap-1";
+                parentEl.innerHTML = `<span>★</span> LIMITED EDITION`;
+            } else if (el.variant === 'tape') {
+                parentEl.className += " bg-yellow-100/70 border border-yellow-300/60 px-6 py-1 font-mono-code text-xs text-amber-900 shadow-sm opacity-90 backdrop-blur-xs";
+                parentEl.textContent = "/// MASKING TAPE ///";
+            } else if (el.variant === 'barcode') {
+                parentEl.className += " bg-white p-1 border border-black text-black font-mono-code text-[9px] text-center shadow-sm";
+                parentEl.innerHTML = `<div class="font-bold text-xs">║▌║█║▌│║▌║▌█</div><span>ZINE-CRAFTER-CAD</span>`;
+            } else if (el.variant === 'scribble') {
+                parentEl.className += " text-pink-500 font-marker text-xl font-bold opacity-80";
+                parentEl.textContent = "~~~~~~~~~~~✦";
+            } else if (el.variant === 'secret') {
+                parentEl.className += " bg-red-600 text-white px-3 py-1 font-mono-code font-black text-xs uppercase tracking-widest shadow-lg rotate-12";
+                parentEl.textContent = "⚠️ TOP SECRET";
+            }
+        }
+
+        // Drag and Drop Logic on Canvas Engine
+        function setupCanvasDragListeners() {
+            const canvas = document.getElementById('page-canvas');
+            let isDragging = false;
+            let startX, startY, initialElX, initialElY;
+
+            canvas.onmousedown = (e) => {
+                const target = e.target.closest('.element-selected');
+                if (!target) return;
+                isDragging = true;
+                const page = state.pages[state.currentPageIndex];
+                const el = page.elements.find(item => item.id === target.id);
+                if (!el) return;
+
+                state.draggedElement = el;
+                startX = e.clientX;
+                startY = e.clientY;
+                initialElX = el.x;
+                initialElY = el.y;
+            };
+
+            window.onmousemove = (e) => {
+                if (!isDragging || !state.draggedElement) return;
+                const dx = (e.clientX - startX) / state.zoom;
+                const dy = (e.clientY - startY) / state.zoom;
+                state.draggedElement.x = Math.round(initialElX + dx);
+                state.draggedElement.y = Math.round(initialElY + dy);
+                
+                const domEl = document.getElementById(state.draggedElement.id);
+                if (domEl) {
+                    domEl.style.left = `${state.draggedElement.x}px`;
+                    domEl.style.top = `${state.draggedElement.y}px`;
+                }
+            };
+
+            window.onmouseup = () => {
+                if (isDragging) {
+                    isDragging = false;
+                    state.draggedElement = null;
+                    renderThumbnails();
+                }
+            };
+        }
+
+        // Add Text Element to Page
+        function addTextElement(type) {
+            const page = state.pages[state.currentPageIndex];
+            const textVal = document.getElementById('text-input').value.trim() || (type === 'heading' ? 'NEW HEADLINE' : 'Enter your story here...');
+            const font = document.getElementById('font-family-select').value;
+            const color = document.getElementById('text-color-picker').value;
+
+            const newEl = {
+                id: 'el-' + Date.now(),
+                type: 'text',
+                text: textVal,
+                x: 40,
+                y: type === 'heading' ? 50 : 120,
+                fontSize: type === 'heading' ? 28 : 14,
+                font: font,
+                color: color,
+                rotation: 0,
+                layer: page.elements.length + 1
+            };
+
+            page.elements.push(newEl);
+            selectElement(newEl.id);
+            renderWorkbench();
+            renderThumbnails();
+            document.getElementById('text-input').value = '';
+        }
+
+        // Add Image Upload
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const page = state.pages[state.currentPageIndex];
+                const newEl = {
+                    id: 'el-img-' + Date.now(),
+                    type: 'image',
+                    src: event.target.result,
+                    x: 40,
+                    y: 80,
+                    width: 200,
+                    rotation: 0,
+                    layer: page.elements.length + 1
+                };
+                page.elements.push(newEl);
+                selectElement(newEl.id);
+                renderWorkbench();
+                renderThumbnails();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Add Sticker Element
+        function addSticker(variant) {
+            const page = state.pages[state.currentPageIndex];
+            const newEl = {
+                id: 'el-stk-' + Date.now(),
+                type: 'sticker',
+                variant: variant,
+                x: 60,
+                y: 150,
+                rotation: Math.floor(Math.random() * 20) - 10,
+                layer: page.elements.length + 1
+            };
+            page.elements.push(newEl);
+            selectElement(newEl.id);
+            renderWorkbench();
+            renderThumbnails();
+        }
+
+        // Selection Controller UI
+        function selectElement(id) {
+            state.selectedElementId = id;
+            document.querySelectorAll('.element-selected').forEach(e => e.classList.remove('element-selected'));
+            if (id) {
+                const elDom = document.getElementById(id);
+                if (elDom) elDom.classList.add('element-selected');
+            }
+            updateElementControlsUI();
+        }
+
+        function updateElementControlsUI() {
+            const ctrlBar = document.getElementById('element-controls');
+            const deleteBtn = document.getElementById('btn-delete-el');
+            
+            if (!state.selectedElementId) {
+                ctrlBar.classList.add('hidden');
+                deleteBtn.classList.add('hidden');
+                return;
+            }
+
+            const page = state.pages[state.currentPageIndex];
+            const el = page.elements.find(item => item.id === state.selectedElementId);
+            if (!el) {
+                ctrlBar.classList.add('hidden');
+                deleteBtn.classList.add('hidden');
+                return;
+            }
+
+            ctrlBar.classList.remove('hidden');
+            deleteBtn.classList.remove('hidden');
+
+            document.getElementById('el-size-slider').value = el.fontSize || el.width || 24;
+            document.getElementById('el-rot-slider').value = el.rotation || 0;
+        }
+
+        function updateSelectedElementSize(val) {
+            if (!state.selectedElementId) return;
+            const page = state.pages[state.currentPageIndex];
+            const el = page.elements.find(item => item.id === state.selectedElementId);
+            if (!el) return;
+
+            if (el.type === 'text') el.fontSize = parseInt(val);
+            if (el.type === 'image') el.width = parseInt(val);
+            renderWorkbench();
+            renderThumbnails();
+        }
+
+        function updateSelectedElementRotation(val) {
+            if (!state.selectedElementId) return;
+            const page = state.pages[state.currentPageIndex];
+            const el = page.elements.find(item => item.id === state.selectedElementId);
+            if (!el) return;
+
+            el.rotation = parseInt(val);
+            renderWorkbench();
+            renderThumbnails();
+        }
+
+        function deleteSelectedElement() {
+            if (!state.selectedElementId) return;
+            const page = state.pages[state.currentPageIndex];
+            page.elements = page.elements.filter(item => item.id !== state.selectedElementId);
+            selectElement(null);
+            renderWorkbench();
+            renderThumbnails();
+        }
+
+        function moveLayer(dir) {
+            if (!state.selectedElementId) return;
+            const page = state.pages[state.currentPageIndex];
+            const el = page.elements.find(item => item.id === state.selectedElementId);
+            if (!el) return;
+
+            if (dir === 'up') el.layer = (el.layer || 1) + 1;
+            else el.layer = Math.max(1, (el.layer || 1) - 1);
+            renderWorkbench();
+        }
+
+        function setPageTexture(textureName) {
+            const page = state.pages[state.currentPageIndex];
+            page.texture = textureName;
+            renderWorkbench();
+            renderThumbnails();
+        }
+
+        // Apply Preset Quick Layouts
+        function applyTemplate(tmplType) {
+            const page = state.pages[state.currentPageIndex];
+            page.elements = [];
+
+            if (tmplType === 'cover') {
+                page.elements.push(
+                    { id: 'el-t1', type: 'text', text: 'ZINE TITLE', x: 20, y: 120, fontSize: 36, font: 'Permanent Marker', color: '#000000', rotation: -2, layer: 1 },
+                    { id: 'el-t2', type: 'text', text: 'SUBTITLE / ISSUE LINE', x: 25, y: 180, fontSize: 14, font: 'Courier Prime', color: '#444444', rotation: 0, layer: 2 },
+                    { id: 'el-t3', type: 'sticker', variant: 'issue', text: 'VOL. 01', x: 200, y: 40, rotation: 10, layer: 3 }
+                );
+            } else if (tmplType === 'photo') {
+                page.elements.push(
+                    { id: 'el-p1', type: 'sticker', variant: 'tape', text: '', x: 90, y: 30, rotation: -2, layer: 1 },
+                    { id: 'el-p2', type: 'text', text: 'FEATURE PHOTO CAPTION', x: 30, y: 360, fontSize: 16, font: 'Playfair Display', color: '#000000', rotation: 0, layer: 2 }
+                );
+            } else if (tmplType === 'column') {
+                page.elements.push(
+                    { id: 'el-c1', type: 'text', text: 'EDITORIAL COLUMN', x: 30, y: 40, fontSize: 20, font: 'Playfair Display', color: '#000000', rotation: 0, layer: 1 },
+                    { id: 'el-c2', type: 'text', text: 'Paragraph line 1...\nParagraph line 2...\nParagraph line 3...', x: 30, y: 80, fontSize: 13, font: 'Courier Prime', color: '#222222', rotation: 0, layer: 2 }
+                );
+            } else if (tmplType === 'backcover') {
+                page.elements.push(
+                    { id: 'el-b1', type: 'text', text: 'THANK YOU FOR READING', x: 40, y: 180, fontSize: 20, font: 'Permanent Marker', color: '#000000', rotation: 0, layer: 1 },
+                    { id: 'el-b2', type: 'text', text: 'Contact / Socials / Website', x: 60, y: 220, fontSize: 12, font: 'Courier Prime', color: '#666666', rotation: 0, layer: 2 },
+                    { id: 'el-b3', type: 'sticker', variant: 'barcode', text: '', x: 100, y: 320, rotation: 0, layer: 3 }
+                );
+            }
+
+            renderWorkbench();
+            renderThumbnails();
+        }
+
+        function duplicateCurrentPage() {
+            const page = state.pages[state.currentPageIndex];
+            const newPage = JSON.parse(JSON.stringify(page));
+            newPage.id = 'page-' + Date.now();
+            newPage.pageNumber = state.pages.length + 1;
+            state.pages.push(newPage);
+            state.currentPageIndex = state.pages.length - 1;
+            renderWorkbench();
+            renderThumbnails();
+        }
+
+        function clearCurrentPage() {
+            state.pages[state.currentPageIndex].elements = [];
+            renderWorkbench();
+            renderThumbnails();
+        }
+
+        function addNewPage() {
+            const newPage = createEmptyPage(state.pages.length + 1);
+            state.pages.push(newPage);
+            state.currentPageIndex = state.pages.length - 1;
+            renderWorkbench();
+            renderThumbnails();
+        }
+
+        function adjustCanvasZoom(delta) {
+            state.zoom = Math.max(0.5, Math.min(2.0, state.zoom + delta));
+            document.getElementById('workbench-zoom-label').textContent = `${Math.round(state.zoom * 100)}%`;
+            document.getElementById('page-canvas-wrapper').style.transform = `scale(${state.zoom})`;
+        }
+
+        function renderThumbnails() {
+            const container = document.getElementById('thumbnail-container');
+            container.innerHTML = '';
+
+            state.pages.forEach((page, idx) => {
+                const thumb = document.createElement('div');
+                thumb.className = `studio-card p-2 cursor-pointer transition flex flex-col items-center relative ${idx === state.currentPageIndex ? 'border-amber-400 bg-amber-400/10' : 'hover:border-zinc-500'}`;
+
+                // Label
+                let labelText = `Page ${page.pageNumber}`;
+                if (idx === 0) labelText = `P. 1 (Front Cover)`;
+                else if (idx === state.pages.length - 1) labelText = `P. ${page.pageNumber} (Back Cover)`;
+
+                thumb.innerHTML = `
+                    <div class="text-[10px] font-mono-code font-bold mb-1 ${idx === state.currentPageIndex ? 'text-amber-400' : 'text-zinc-400'}">
+                        ${labelText}
+                    </div>
+                    <div class="w-full h-24 paper-bg-${page.texture} border border-zinc-700 relative overflow-hidden rounded-xs flex items-center justify-center">
+                        <span class="text-[9px] font-mono-code text-zinc-400 select-none opacity-50">${page.elements.length} Elements</span>
+                    </div>
+                `;
+
+                thumb.onclick = () => {
+                    state.currentPageIndex = idx;
+                    selectElement(null);
+                    renderWorkbench();
+                    renderThumbnails();
+                };
+
+                container.appendChild(thumb);
+            });
+        }
+
+        // IMPOSITION ENGINE CALCULATIONS
+        function renderImpositionView() {
+            const sheetsContainer = document.getElementById('imposition-sheets-container');
+            sheetsContainer.innerHTML = '';
+
+            const preset = PRESETS[state.preset];
+            const sheets = calculateImpositionSheets(state.preset, state.pages, state.isDuplex);
+
+            document.getElementById('sheet-count-info').textContent = `${sheets.length} Sheet(s) Required (Letter 11" x 8.5" Landscape)`;
+
+            sheets.forEach((sheetData, sIdx) => {
+                const sheetCard = document.createElement('div');
+                sheetCard.className = "studio-card p-4 bg-[#141419] border-zinc-700 flex flex-col items-center space-y-3";
+
+                sheetCard.innerHTML = `
+                    <div class="w-full flex justify-between items-center text-xs font-mono-code">
+                        <span class="font-bold text-amber-400">${sheetData.title}</span>
+                        <span class="text-zinc-400">${sheetData.subtext}</span>
+                    </div>
+                `;
+
+                // Render 11" x 8.5" Landscape Print Sheet Simulation
+                const sheetDom = renderSheetDOM(sheetData);
+                sheetCard.appendChild(sheetDom);
+                sheetsContainer.appendChild(sheetCard);
+            });
+
+            // Also render inside Modal for browser print
+            renderModalPrintSheets(sheets);
+        }
+
+        // Calculate Imposition Page Maps
+        function calculateImpositionSheets(presetKey, pages, isDuplex) {
+            const sheets = [];
+
+            if (presetKey === 'small') {
+                // 8-Page Single-Sheet Micro Zine Layout
+                // Landscape 4x2 Grid. Top row inverted 180°!
+                // Top Row (Left to Right): Page 5 (inv), Page 6 (inv), Page 7 (inv), Page 8 (inv - Back)
+                // Bottom Row (Left to Right): Page 4, Page 3, Page 2, Page 1 (Cover)
+                sheets.push({
+                    title: "SHEET 1 - SINGLE SHEET (8-PAGE MICRO ZINE)",
+                    subtext: "Cut middle horizontal slit between P6/P3 & P7/P2",
+                    gridCols: 4,
+                    gridRows: 2,
+                    isMicroZine: true,
+                    panels: [
+                        { pageIndex: 4, pageNum: 5, invert: true },
+                        { pageIndex: 5, pageNum: 6, invert: true },
+                        { pageIndex: 6, pageNum: 7, invert: true },
+                        { pageIndex: 7, pageNum: 8, invert: true },
+                        { pageIndex: 3, pageNum: 4, invert: false },
+                        { pageIndex: 2, pageNum: 3, invert: false },
+                        { pageIndex: 1, pageNum: 2, invert: false },
+                        { pageIndex: 0, pageNum: 1, invert: false }
+                    ]
+                });
+            } else if (presetKey === 'large') {
+                // Half-Letter Saddle Stitch (8 Pages total, 2 Sheets or 1 Duplex Sheet)
+                // Sheet 1 Front: Left = P.8 (Back Cover), Right = P.1 (Front Cover)
+                // Sheet 1 Back: Left = P.2, Right = P.7
+                // Sheet 2 Front: Left = P.6, Right = P.3
+                // Sheet 2 Back: Left = P.4, Right = P.5
+
+                sheets.push({
+                    title: isDuplex ? "SHEET 1 - FRONT SIDE" : "SHEET 1 (OUTER COVER & P.1)",
+                    subtext: "Fold down middle line",
+                    gridCols: 2,
+                    gridRows: 1,
+                    panels: [
+                        { pageIndex: 7, pageNum: 8, invert: false },
+                        { pageIndex: 0, pageNum: 1, invert: false }
+                    ]
+                });
+
+                sheets.push({
+                    title: isDuplex ? "SHEET 1 - BACK SIDE (DUPLEX)" : "SHEET 2 (INSIDE SPREAD P.2 / P.7)",
+                    subtext: "Fold down middle line",
+                    gridCols: 2,
+                    gridRows: 1,
+                    panels: [
+                        { pageIndex: 1, pageNum: 2, invert: false },
+                        { pageIndex: 6, pageNum: 7, invert: false }
+                    ]
+                });
+            } else if (presetKey === 'medium') {
+                // 16-Page Pocket Booklet (4x2 Grid per sheet)
+                sheets.push({
+                    title: "SHEET 1 - FRONT SIDE (16-PAGE POCKET ZINE)",
+                    subtext: "Pass 1",
+                    gridCols: 4,
+                    gridRows: 2,
+                    panels: [
+                        { pageIndex: 15, pageNum: 16, invert: true },
+                        { pageIndex: 0, pageNum: 1, invert: true },
+                        { pageIndex: 13, pageNum: 14, invert: true },
+                        { pageIndex: 2, pageNum: 3, invert: true },
+                        { pageIndex: 3, pageNum: 4, invert: false },
+                        { pageIndex: 12, pageNum: 13, invert: false },
+                        { pageIndex: 1, pageNum: 2, invert: false },
+                        { pageIndex: 14, pageNum: 15, invert: false }
+                    ]
+                });
+            }
+
+            return sheets;
+        }
+
+        // Render Sheet Interactive Preview DOM
+        function renderSheetDOM(sheetData) {
+            const container = document.createElement('div');
+            container.className = "relative bg-white text-black p-4 rounded shadow-2xl border-4 border-black";
+            container.style.width = "720px";
+            container.style.height = "520px";
+
+            // Fold / Cut Line Overlay
+            if (state.showFolds) {
+                const foldOverlay = document.createElement('div');
+                foldOverlay.className = "absolute inset-0 pointer-events-none z-20";
+                
+                if (sheetData.gridCols === 4 && sheetData.gridRows === 2) {
+                    // Center horizontal fold line
+                    foldOverlay.innerHTML += `<div class="absolute top-1/2 left-0 right-0 border-t-2 border-dashed border-blue-600"></div>`;
+                    // Vertical fold lines
+                    foldOverlay.innerHTML += `<div class="absolute top-0 bottom-0 left-1/4 border-l-2 border-dashed border-blue-600"></div>`;
+                    foldOverlay.innerHTML += `<div class="absolute top-0 bottom-0 left-1/2 border-l-2 border-dashed border-blue-600"></div>`;
+                    foldOverlay.innerHTML += `<div class="absolute top-0 bottom-0 left-3/4 border-l-2 border-dashed border-blue-600"></div>`;
+                } else if (sheetData.gridCols === 2) {
+                    foldOverlay.innerHTML += `<div class="absolute top-0 bottom-0 left-1/2 border-l-2 border-dashed border-blue-600"></div>`;
+                }
+
+                container.appendChild(foldOverlay);
+            }
+
+            // Micro zine center slit cut line indicator
+            if (state.showCuts && sheetData.isMicroZine) {
+                const cutOverlay = document.createElement('div');
+                cutOverlay.className = "absolute top-1/2 left-1/4 right-1/4 h-0 border-t-4 border-red-600 z-30 flex items-center justify-center";
+                cutOverlay.innerHTML = `<span class="bg-red-600 text-white font-mono-code font-bold text-[9px] px-2 py-0.5 rounded-full -mt-2.5">✂️ CUT CENTER SLIT HERE</span>`;
+                container.appendChild(cutOverlay);
+            }
+
+            // Grid Layout Container
+            const grid = document.createElement('div');
+            grid.className = `w-full h-full grid grid-cols-${sheetData.gridCols} grid-rows-${sheetData.gridRows} gap-1 bg-gray-200 p-1`;
+
+            sheetData.panels.forEach(panel => {
+                const pageObj = state.pages[panel.pageIndex];
+                const panelDom = document.createElement('div');
+                panelDom.className = `relative overflow-hidden paper-bg-${pageObj ? pageObj.texture : 'plain'} border border-zinc-300 flex flex-col justify-between p-2 select-none`;
+                
+                if (panel.invert) {
+                    panelDom.style.transform = "rotate(180deg)";
+                }
+
+                if (pageObj) {
+                    // Title/Text Summary Mini Preview
+                    panelDom.innerHTML = `
+                        <div class="flex justify-between items-center font-mono-code text-[9px] font-bold text-zinc-500">
+                            <span>P. ${panel.pageNum}</span>
+                            ${panel.invert ? '<span class="text-red-600">INVERTED 180°</span>' : ''}
+                        </div>
+                        <div class="text-center font-mono-code text-[10px] text-zinc-700 font-bold truncate">
+                            ${pageObj.elements.length > 0 ? pageObj.elements[0].text || 'Graphic Content' : '[Blank Page]'}
+                        </div>
+                        <div class="text-[8px] font-mono-code text-zinc-400 text-right">${pageObj.elements.length} items</div>
+                    `;
+                } else {
+                    panelDom.innerHTML = `<span class="text-[10px] font-mono-code text-zinc-400">Blank P.${panel.pageNum}</span>`;
+                }
+
+                grid.appendChild(panelDom);
+            });
+
+            container.appendChild(grid);
+            return container;
+        }
+
+        // Render Sheets for Browser Print Engine
+        function renderModalPrintSheets(sheets) {
+            const modalRender = document.getElementById('modal-sheets-render');
+            const printContainer = document.getElementById('print-output-container');
+            
+            modalRender.innerHTML = '';
+            printContainer.innerHTML = '';
+
+            sheets.forEach(sheetData => {
+                const sheetDom = renderSheetDOM(sheetData);
+                modalRender.appendChild(sheetDom);
+
+                // Create Print HTML Page for window.print()
+                const printSheet = document.createElement('div');
+                printSheet.className = 'print-sheet';
+                
+                const clone = sheetDom.cloneNode(true);
+                clone.style.width = "100%";
+                clone.style.height = "100%";
+                clone.style.border = "none";
+                printSheet.appendChild(clone);
+
+                printContainer.appendChild(printSheet);
+            });
+        }
+
+        // Print Modal Window Controls
+        function openPrintModal() {
+            renderImpositionView();
+            document.getElementById('print-preview-modal').classList.remove('hidden');
+        }
+
+        function closePrintModal() {
+            document.getElementById('print-preview-modal').classList.add('hidden');
+        }
+
+        function executeBrowserPrint() {
+            closePrintModal();
+            window.print();
+        }
+    </script>
+</body>
+</html>
