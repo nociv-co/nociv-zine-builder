@@ -1,0 +1,14 @@
+/* css/style.css */
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+.font-marker { font-family: 'Permanent Marker', cursive; }
+.font-typewriter { font-family: 'Courier Prime', monospace; }
+.font-mono { font-family: 'JetBrains Mono', monospace; }
+.font-serif { font-family: 'Playfair Display', serif; }
+
+/* Custom Scrollbars */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0f0f12; }
+::-webkit-scrollbar-thumb { background: #2a2a32; border-radius: 3px; }
