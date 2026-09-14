@@ -1,86 +1,16 @@
-// js/main.js
-import { store } from './store.js';
-import { renderVectorSheet } from './vectorEngine.js';
-
-document.addEventListener('DOMContentLoaded', () => {
-  const container = document.getElementById('canvas-container');
-  const pageGrid = document.getElementById('page-grid');
-  const textInput = document.getElementById('page-text-input');
-  const presetSelect = document.getElementById('preset-select');
-  const exportBtn = document.getElementById('btn-export');
-
-  // 1. Render function triggered whenever state changes
-  function renderUI(state) {
-    // Render the interactive vector sheet canvas
-    container.innerHTML = renderVectorSheet(state);
-
-    // Re-bind click events on SVG pages directly
-    container.querySelectorAll('[data-page-index]').forEach(el => {
-      el.addEventListener('click', () => {
-        const idx = parseInt(el.getAttribute('data-page-index'), 10);
-        store.setActivePage(idx);
-      });
-    });
-
-    // Render Page Workbench Selector Buttons
-    let gridHtml = '';
-    state.pages.forEach((_, idx) => {
-      const active = idx === state.activePageIndex;
-      gridHtml += `
-        <button data-page="${idx}" class="p-2 border rounded font-bold transition ${
-          active
-            ? 'bg-amber-400 text-black border-amber-400'
-            : 'bg-[#18181c] border-zinc-800 text-zinc-300 hover:border-zinc-600'
-        }">
-          P${idx + 1}
-        </button>
-      `;
-    });
-    pageGrid.innerHTML = gridHtml;
-
-    // Bind click events for page grid buttons
-    pageGrid.querySelectorAll('button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const idx = parseInt(btn.getAttribute('data-page'), 10);
-        store.setActivePage(idx);
-      });
-    });
-
-    // Sync input box text with active page title
-    const activePage = state.pages[state.activePageIndex];
-    if (document.activeElement !== textInput) {
-      textInput.value = activePage ? activePage.title : '';
-    }
-  }
-
-  // 2. Listen to state updates
-  store.subscribe(renderUI);
-
-  // 3. UI Input Handlers
-  textInput.addEventListener('input', (e) => {
-    store.updateActivePageText(e.target.value);
-  });
-
-  presetSelect.addEventListener('change', (e) => {
-    store.setPreset(e.target.value);
-  });
-
-  // 4. PDF Print Export Action
-  exportBtn.addEventListener('click', () => {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({
-      orientation: 'landscape',
-      unit: 'in',
-      format: [11, 8.5]
-    });
-
-    html2canvas(container).then(canvas => {
-      const imgData = canvas.toDataURL('image/png');
-      doc.addImage(imgData, 'PNG', 0, 0, 11, 8.5);
-      doc.save('nociv-zine-print.pdf');
-    });
-  });
-
-  // Initial draw
-  store.notify();
-});
+import{store}from"./store.js";import{dom,downloadJSON}from"./vectorEngine.js";store.init();const $=x=>document.getElementById(x);let gesture=null,draw=false;
+function page(){return store.data.pages[store.data.active]}function render(){let d=store.data,p=page();$("issue").textContent="ISSUE "+d.issue.number;$("meta").textContent=d.issue.title.toUpperCase()+" / "+d.pages.length+" PAGES";$("title").textContent=p.name;$("paper").className="paper "+p.paper;$("canvas").innerHTML="";p.elements.sort((a,b)=>(a.z||0)-(b.z||0)).forEach(e=>$("canvas").append(dom(e,d.selected===e.id,{pointer:pointerDown,edit:editText})));renderPages();let s=p.elements.find(e=>e.id===d.selected);$("selected").classList.toggle("hide",!s);if(s)$("selectedName").textContent=s.type.toUpperCase()}
+function renderPages(){let x=$("pagesList");x.innerHTML="";store.data.pages.forEach((p,i)=>{let b=document.createElement("button");b.className="pageThumb "+(i===store.data.active?"active":"");b.innerHTML=`${p.name}<div class="mini">${p.elements.map(e=>e.type==="text"?e.text.slice(0,25):e.type).join(" · ")}</div>`;b.onclick=()=>{store.data.active=i;store.data.selected=null;store.persist();render()};x.append(b)})}
+function select(e){store.data.selected=e.id;render()}
+function pointerDown(e,el,node){e.stopPropagation();select(el);let pr=$("paper").getBoundingClientRect(),r=node.getBoundingClientRect();if(e.target.dataset.h==="resize")gesture={t:"s",e,s:el.scale||1,x:e.clientX,y:e.clientY};else if(e.target.dataset.h==="rotate")gesture={t:"r",e,cx:r.left+r.width/2,cy:r.top+r.height/2,a:Math.atan2(e.clientY-(r.top+r.height/2),e.clientX-(r.left+r.width/2)),rot:el.rotation||0};else gesture={t:"m",e,dx:e.clientX-pr.left-el.x,dy:e.clientY-pr.top-el.y};node.setPointerCapture?.(e.pointerId)}
+window.onpointermove=e=>{if(!gesture)return;let g=gesture;if(g.t==="m"){let r=$("paper").getBoundingClientRect();g.e.x=e.clientX-r.left-g.dx;g.e.y=e.clientY-r.top-g.dy}else if(g.t==="s")g.e.scale=Math.max(.2,Math.min(4,g.s+((e.clientX-g.x)+(e.clientY-g.y))/280));else{let a=Math.atan2(e.clientY-g.cy,e.clientX-g.cx);g.e.rotation=g.rot+(a-g.a)*180/Math.PI}let n=document.querySelector(`[data-id="${g.e.id}"]`);if(n)n.style.transform=`translate(${g.e.x}px,${g.e.y}px) rotate(${g.e.rotation||0}deg) scale(${g.e.scale||1})`};window.onpointerup=()=>{if(gesture){store.commit();gesture=null}};
+function addText(font="marker"){ $("font").value=font;$("textDialog").showModal() }function editText(e){$("text").value=e.text;$("font").value=e.font;$("size").value=e.size||32;$("textDialog").showModal();$("addText").onclick=()=>{e.text=$("text").value;e.font=$("font").value;e.size=+$("size").value;store.commit();render();$("textDialog").close()}}
+$("addText").onclick=()=>{let t=$("text").value.trim();if(!t)return;let p=page(),e={id:crypto.randomUUID(),type:"text",text:t,font:$("font").value,size:+$("size").value,x:35,y:70,rotation:0,scale:1,z:p.elements.length+1,width:300,color:"#222"};p.elements.push(e);store.data.selected=e.id;store.commit();render();$("textDialog").close();$("text").value=""};
+function sticker(v){let m={issue:["ISSUE "+store.data.issue.number,"issueS"],limited:["LIMITED ED.","limited"],tape:["MASKING TAPE","tape"],archive:["ARCHIVE","archive"],barcode:["|||| ||| ||||","barcode"],hand:["MAKE YOUR MARK","hand"]}[v],p=page(),e={id:crypto.randomUUID(),type:"sticker",text:m[0],variant:m[1],x:60,y:110,rotation:(Math.random()*10)-5,scale:1,z:p.elements.length+1};p.elements.push(e);store.data.selected=e.id;store.commit();render();$("stickerDialog").close()}
+function drawMode(){draw=true;let r=$("paper").getBoundingClientRect(),c=document.createElement("canvas");c.width=r.width*2;c.height=r.height*2;c.style.cssText="position:absolute;inset:0;width:100%;height:100%;z-index:9;touch-action:none";let x=c.getContext("2d");x.scale(2,2);$("canvas").append(c);let pts=[];c.onpointerdown=e=>{c.setPointerCapture(e.pointerId);pts=[[e.clientX-r.left,e.clientY-r.top]];x.beginPath();x.moveTo(...pts[0])};c.onpointermove=e=>{if(!pts.length)return;let q=[e.clientX-r.left,e.clientY-r.top];pts.push(q);x.lineTo(...q);x.strokeStyle="#24231f";x.lineWidth=3;x.lineCap="round";x.stroke()};c.onpointerup=()=>{let p=page(),e={id:crypto.randomUUID(),type:"draw",src:c.toDataURL(),width:r.width,x:0,y:0,rotation:0,scale:1,z:p.elements.length+1};c.remove();p.elements.push(e);store.data.selected=e.id;store.commit();render();draw=false}}
+$("image").onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader;r.onload=()=>{let p=page(),x={id:crypto.randomUUID(),type:"image",src:r.result,width:230,x:55,y:100,rotation:0,scale:1,z:p.elements.length+1};p.elements.push(x);store.data.selected=x.id;store.commit();render()};r.readAsDataURL(f);e.target.value=""};
+document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>{document.querySelectorAll(".nav").forEach(n=>n.classList.remove("active"));b.classList.add("active");["make","pages","printPanel"].forEach(x=>$(x).classList.add("hide"));$(b.dataset.v==="print"?"printPanel":b.dataset.v).classList.remove("hide")});
+document.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>b.dataset.a==="photo"?$("image").click():b.dataset.a==="draw"?drawMode():b.dataset.a==="text"?addText():$("stickerDialog").showModal());document.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>addText(b.dataset.f));document.querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>{page().paper=b.dataset.p;store.commit();render()});document.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>sticker(b.dataset.s));
+$("new").onclick=()=>{$("issueDialog").showModal()};$("create").onclick=()=>{store.data=store.newIssue({number:$("num").value,title:$("titleInput").value,author:$("author").value,count:$("count").value});store.h=[JSON.stringify(store.data)];store.f=[];store.commit();render();$("issueDialog").close()};$("save").onclick=()=>downloadJSON(store.data);$("print").onclick=$("print2").onclick=()=>window.print();$("undo").onclick=()=>{store.undo();render()};$("redo").onclick=()=>{store.redo();render()};$("full").onclick=()=>document.documentElement.requestFullscreen?.();
+$("del").onclick=()=>{let p=page();p.elements=p.elements.filter(e=>e.id!==store.data.selected);store.data.selected=null;store.commit();render()};$("dup").onclick=()=>{let p=page(),e=p.elements.find(x=>x.id===store.data.selected);if(!e)return;let c=JSON.parse(JSON.stringify(e));c.id=crypto.randomUUID();c.x+=20;c.y+=20;c.z=p.elements.length+1;p.elements.push(c);store.data.selected=c.id;store.commit();render()};function layer(d){let p=page(),i=p.elements.findIndex(e=>e.id===store.data.selected),j=i+d;if(i<0||j<0||j>=p.elements.length)return;[p.elements[i],p.elements[j]]=[p.elements[j],p.elements[i]];p.elements.forEach((e,k)=>e.z=k+1);store.commit();render()}$("up").onclick=()=>layer(1);$("down").onclick=()=>layer(-1);$("addPage").onclick=()=>{let n=store.data.pages.length;p=store.data.pages.splice(n-1,0,{id:crypto.randomUUID(),name:"PAGE "+String(n).padStart(2,"0"),paper:"white",elements:[]});store.data.active=n-1;store.commit();render()};$("canvas").onclick=e=>{if(e.target.id==="canvas"){store.data.selected=null;render()}};window.addEventListener("keydown",e=>{if((e.key==="Delete"||e.key==="Backspace")&&!/INPUT|TEXTAREA/.test(document.activeElement.tagName)&&store.data.selected)$("del").click();if((e.ctrlKey||e.metaKey)&&e.key==="z"){e.preventDefault();$("undo").click()}});
+render();
