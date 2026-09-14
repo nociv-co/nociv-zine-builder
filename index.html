@@ -1,60 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NOCIV // Zine Builder</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&family=Permanent+Marker&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
-</head>
-<body class="bg-[#0f0f12] text-zinc-200 min-h-screen flex flex-col font-sans">
-
-  <!-- Header Bar -->
-  <header class="bg-[#141419] border-b border-zinc-800 p-3 px-4 flex items-center justify-between">
-    <div class="flex items-center gap-2">
-      <span class="bg-amber-400 text-black px-2 py-1 font-mono font-bold text-xs rounded">NOCIV</span>
-      <h1 class="text-sm font-mono font-semibold">Zine Builder & Imposition Engine</h1>
-    </div>
-    <div class="flex items-center gap-2">
-      <button id="btn-save" class="bg-zinc-800 hover:bg-zinc-700 text-xs font-mono px-3 py-1.5 rounded">Save Project</button>
-      <button id="btn-export" class="bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs font-mono px-3 py-1.5 rounded">Export Print PDF</button>
-    </div>
-  </header>
-
-  <!-- Workspace Area -->
-  <div class="flex-1 flex overflow-hidden">
-    <!-- Left Controls Panel -->
-    <aside id="controls" class="w-80 bg-[#141419] border-r border-zinc-800 p-4 space-y-6 overflow-y-auto">
-      <div>
-        <label class="block text-xs font-mono font-bold text-amber-400 mb-2">1. Layout Preset</label>
-        <select id="preset-select" class="w-full bg-[#0b0b0d] border border-zinc-800 text-xs font-mono p-2 rounded text-white">
-          <option value="mini-8">8-Page Micro Zine (1 Sheet, Slit Cut)</option>
-          <option value="accordion-6">6-Panel Accordion</option>
-          <option value="saddle-8">8-Page Saddle Stitch</option>
-        </select>
-      </div>
-
-      <div class="border-t border-zinc-800 pt-4">
-        <label class="block text-xs font-mono font-bold text-amber-400 mb-2">2. Page Workbench</label>
-        <div id="page-grid" class="grid grid-cols-4 gap-1.5 font-mono text-xs"></div>
-      </div>
-
-      <div class="border-t border-zinc-800 pt-4 space-y-3">
-        <label class="block text-xs font-mono font-bold text-amber-400">3. Text & Content</label>
-        <input type="text" id="page-text-input" placeholder="Page Title..." class="w-full bg-[#0b0b0d] border border-zinc-800 p-2 text-xs font-mono rounded text-white">
-        <button id="btn-add-text" class="w-full bg-zinc-800 hover:bg-zinc-700 text-xs font-mono p-2 rounded">Update Page Text</button>
-      </div>
-    </aside>
-
-    <!-- Center Canvas Preview -->
-    <main id="preview-viewport" class="flex-1 bg-[#0a0a0c] p-6 flex items-center justify-center overflow-auto">
-      <div id="canvas-container" class="shadow-2xl"></div>
-    </main>
-  </div>
-
-  <script type="module" src="js/main.js"></script>
-</body>
-</html>
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NOCIV Zine Builder</title><link rel="stylesheet" href="css/style.css"></head><body>
+<header><div class="brand"><b>NOCIV</b><span>ZINE BUILDER</span></div><div><button id="new">NEW ISSUE</button><button id="save">SAVE</button><button class="gold" id="print">PRINT ZINE</button></div></header>
+<main><aside><section class="issue"><small>CURRENT ISSUE</small><strong id="issue">ISSUE 001</strong><span id="meta">UNTITLED / 8 PAGES</span></section>
+<nav><button class="nav active" data-v="make">01<br>MAKE</button><button class="nav" data-v="pages">02<br>PAGES</button><button class="nav" data-v="print">03<br>PRINT</button></nav>
+<section id="make"><label>ADD TO PAGE</label><button class="big" data-a="photo"><b>PHOTO</b><small>your own image</small></button><button class="big" data-a="draw"><b>DRAW</b><small>draw on the paper</small></button><button class="big" data-a="text"><b>TYPE</b><small>headlines and notes</small></button><button class="big" data-a="sticker"><b>STICKER</b><small>stamps and marks</small><hr><label>TYPE STYLE</label><div class="grid"><button data-f="marker">MARKER</button><button data-f="typewriter">TYPEWRITER</button><button data-f="serif">EDITORIAL</button><button data-f="vintage">VINTAGE</button></div><hr><label>PAPER</label><div class="grid"><button data-p="cream">CREAM</button><button data-p="yellow">YELLOW</button><button data-p="grey">GREY</button><button data-p="red">RED</button><button data-p="white">WHITE</button><button data-p="grid">NOTEBOOK</button></div></section>
+<section id="pages" class="hide"><label>ISSUE PAGES</label><div id="pagesList"></div><button class="wide" id="addPage">+ ADD PAGE</button></section>
+<section id="printPanel" class="hide"><label>PRINT</label><p class="note">Your creative pages stay separate from the print arrangement. Print uses the browser's print dialog so you can save a PDF.</p><button class="wide gold" id="print2">PRINT / SAVE PDF</button></section>
+<section id="selected" class="hide"><label>SELECTED ELEMENT</label><b id="selectedName">ELEMENT</b><div class="grid"><button id="up">BRING FORWARD</button><button id="down">SEND BACK</button><button id="dup">DUPLICATE</button><button id="del">DELETE</button></div></section>
+</aside><section class="studio"><div class="studioHead"><div><small id="mode">MAKE</small><h1 id="title">COVER</h1></div><div><button id="undo">UNDO</button><button id="redo">REDO</button><button id="full">FULLSCREEN</button></div></div><div class="desk"><span class="hint">GRAB IT. MOVE IT. TURN IT. MAKE IT YOURS.</span><div id="paper" class="paper cream"><div id="canvas"></div></div><span class="help">DRAG MOVE · PINCH SCALE · TWIST ROTATE · DOUBLE CLICK EDIT</span></div></section></main>
+<input id="image" type="file" accept="image/*" hidden>
+<dialog id="issueDialog"><form method="dialog" class="dialog"><small>NEW ISSUE</small><h2>Make something worth printing.</h2><label>ISSUE NUMBER<input id="num" value="001"></label><label>TITLE<input id="titleInput" placeholder="Untitled"></label><label>BY<input id="author" placeholder="Your name"></label><label>PAGE COUNT<select id="count"><option>8</option><option>12</option><option>16</option></select></label><div><button value="cancel">CANCEL</button><button class="gold" id="create">CREATE ISSUE</button></div></form></dialog>
+<dialog id="textDialog"><form method="dialog" class="dialog"><small>TYPE</small><label>TEXT<textarea id="text" rows="4" placeholder="Write something..."></textarea></label><label>FONT<select id="font"><option value="marker">Permanent Marker</option><option value="typewriter">Courier Prime</option><option value="serif">Playfair Display</option><option value="vintage">Special Elite</option></select></label><label>SIZE<input id="size" type="range" min="12" max="96" value="32"></label><div><button value="cancel">CANCEL</button><button class="gold" id="addText">ADD TO PAGE</button></div></form></dialog>
+<dialog id="stickerDialog"><form method="dialog" class="dialog"><small>STICKER DRAWER</small><div class="stickers"><button data-s="issue">ISSUE 001</button><button data-s="limited">LIMITED</button><button data-s="tape">MASKING TAPE</button><button data-s="archive">ARCHIVE</button><button data-s="barcode">|||| ||| ||||</button><button data-s="hand">MAKE YOUR MARK</button></div><button value="cancel">CLOSE</button></form></dialog>
+<script type="module" src="js/main.js"></script></body></html>
