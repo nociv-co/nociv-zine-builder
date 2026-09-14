@@ -1,483 +1,60 @@
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&family=Permanent+Marker&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NOCIV // Zine Builder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@400;700&family=Permanent+Marker&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-[#0f0f12] text-zinc-200 min-h-screen flex flex-col font-sans">
 
-<style>
-  :root {
-    --bg-dark: #0f0f12;
-    --card-dark: #18181c;
-    --card-border: #2a2a32;
-    --accent-gold: #d4af37;
-    --accent-gold-hover: #b89528;
-  }
-  body {
-    font-family: 'Inter', sans-serif;
-    background-color: var(--bg-dark);
-    color: #e4e4e7;
-  }
-  .font-mono-code { font-family: 'JetBrains Mono', monospace; }
-  .font-typewriter { font-family: 'Courier Prime', monospace; }
-  .font-marker { font-family: 'Permanent Marker', cursive; }
-  .font-serif-zine { font-family: 'Playfair Display', serif; }
-  
-  .studio-card {
-    background-color: var(--card-dark);
-    border: 1px solid var(--card-border);
-    border-radius: 0.5rem;
-  }
-  .studio-input {
-    background-color: #0b0b0d;
-    border: 1px solid #33333e;
-    color: #fff;
-    border-radius: 0.375rem;
-  }
-  .studio-input:focus {
-    outline: none;
-    border-color: var(--accent-gold);
-  }
-  .btn-gold {
-    background-color: var(--accent-gold);
-    color: #0f0f12;
-    font-weight: 700;
-    transition: all 0.15s ease-in-out;
-  }
-  .btn-gold:hover {
-    background-color: var(--accent-gold-hover);
-  }
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: #0f0f12; }
-  ::-webkit-scrollbar-thumb { background: #2a2a32; border-radius: 3px; }
-</style>
-
-<div id="zine-app" class="min-h-screen flex flex-col">
-  <!-- Top Navigation Header -->
-  <header class="bg-[#141419] border-b border-zinc-800 p-3 px-4 flex flex-wrap items-center justify-between gap-3 z-30">
-    <div class="flex items-center space-x-3">
-      <div class="bg-amber-400 text-black px-2.5 py-1 font-mono-code font-black text-sm rounded flex items-center gap-2">
-        <span>📖</span> NOCIV // ZINE-MAKER
-      </div>
-      <span class="text-xs font-mono-code text-zinc-400 hidden sm:inline">Vector Engine & Imposition Layout Tool</span>
-    </div>
-
-    <!-- Mobile View Switcher -->
-    <div class="flex sm:hidden bg-[#0b0b0d] p-1 rounded border border-zinc-800 text-xs">
-      <button onclick="switchMobileTab('controls')" id="tab-btn-controls" class="px-3 py-1 rounded bg-amber-400 text-black font-bold">Controls</button>
-      <button onclick="switchMobileTab('preview')" id="tab-btn-preview" class="px-3 py-1 rounded text-zinc-400">Preview</button>
-    </div>
-
-    <!-- Export & Global Controls -->
+  <!-- Header Bar -->
+  <header class="bg-[#141419] border-b border-zinc-800 p-3 px-4 flex items-center justify-between">
     <div class="flex items-center gap-2">
-      <button onclick="toggleFullscreenCanvas()" class="px-3 py-1.5 rounded text-xs font-mono-code bg-zinc-800 hover:bg-zinc-700 text-zinc-200 flex items-center gap-1">
-        <span>⛶</span> Fullscreen
-      </button>
-      <button onclick="exportZinePDF()" class="btn-gold px-4 py-1.5 rounded text-xs font-mono-code flex items-center gap-1.5 shadow-lg">
-        <span>🖨️</span> EXPORT PRINT PDF
-      </button>
+      <span class="bg-amber-400 text-black px-2 py-1 font-mono font-bold text-xs rounded">NOCIV</span>
+      <h1 class="text-sm font-mono font-semibold">Zine Builder & Imposition Engine</h1>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btn-save" class="bg-zinc-800 hover:bg-zinc-700 text-xs font-mono px-3 py-1.5 rounded">Save Project</button>
+      <button id="btn-export" class="bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs font-mono px-3 py-1.5 rounded">Export Print PDF</button>
     </div>
   </header>
 
-  <!-- Main Split Architecture View -->
-  <div class="flex-1 flex overflow-hidden relative">
-    
-    <!-- LEFT PANEL: Controls, Parameters & Page Data -->
-    <aside id="controls-panel" class="w-full sm:w-80 lg:w-96 studio-card !rounded-none border-y-0 border-l-0 p-4 overflow-y-auto flex-shrink-0 z-10 space-y-6 bg-[#141419] flex flex-col">
-      
-      <!-- Fold & Layout Preset Selector -->
+  <!-- Workspace Area -->
+  <div class="flex-1 flex overflow-hidden">
+    <!-- Left Controls Panel -->
+    <aside id="controls" class="w-80 bg-[#141419] border-r border-zinc-800 p-4 space-y-6 overflow-y-auto">
       <div>
-        <label class="block font-mono-code text-xs font-bold uppercase tracking-wider text-amber-400 mb-2">
-          1. Fold & Layout Preset
-        </label>
-        <select id="preset-selector" onchange="applyPreset(this.value)" class="w-full studio-input p-2 text-xs font-mono-code">
-          <option value="mini-8">8-Page Micro Zine (1 Sheet, Single Cut)</option>
-          <option value="accordion-6">6-Panel Accordion Fold</option>
-          <option value="saddle-8">8-Page Half-Letter Saddle-Stitch</option>
+        <label class="block text-xs font-mono font-bold text-amber-400 mb-2">1. Layout Preset</label>
+        <select id="preset-select" class="w-full bg-[#0b0b0d] border border-zinc-800 text-xs font-mono p-2 rounded text-white">
+          <option value="mini-8">8-Page Micro Zine (1 Sheet, Slit Cut)</option>
+          <option value="accordion-6">6-Panel Accordion</option>
+          <option value="saddle-8">8-Page Saddle Stitch</option>
         </select>
       </div>
 
-      <!-- Zine State Parameters -->
-      <div class="border-t border-zinc-800 pt-4 space-y-3">
-        <label class="block font-mono-code text-xs font-bold uppercase tracking-wider text-amber-400">
-          2. Document Geometry & Guides
-        </label>
-        
-        <div class="grid grid-cols-2 gap-2 text-xs font-mono-code">
-          <div>
-            <span class="text-zinc-400">Bleed (in):</span>
-            <input type="number" id="param-bleed" step="0.0625" value="0.125" onchange="updateZineParam('bleed', parseFloat(this.value))" class="w-full studio-input p-1 mt-1">
-          </div>
-          <div>
-            <span class="text-zinc-400">Margin (in):</span>
-            <input type="number" id="param-margin" step="0.0625" value="0.25" onchange="updateZineParam('margin', parseFloat(this.value))" class="w-full studio-input p-1 mt-1">
-          </div>
-        </div>
-
-        <div class="flex items-center gap-4 text-xs font-mono-code text-zinc-300 pt-1">
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" id="show-guides" checked onchange="updateZineParam('showGuides', this.checked)" class="accent-amber-400">
-            <span>Show Folds & Cut Lines</span>
-          </label>
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" id="show-scale" checked onchange="updateZineParam('showScale', this.checked)" class="accent-amber-400">
-            <span>Show 1" Scale Bar</span>
-          </label>
-        </div>
+      <div class="border-t border-zinc-800 pt-4">
+        <label class="block text-xs font-mono font-bold text-amber-400 mb-2">2. Page Workbench</label>
+        <div id="page-grid" class="grid grid-cols-4 gap-1.5 font-mono text-xs"></div>
       </div>
 
-      <!-- Dynamic Page Workbench Slot Editor -->
-      <div class="border-t border-zinc-800 pt-4 flex-1 flex flex-col">
-        <div class="flex items-center justify-between mb-2">
-          <label class="font-mono-code text-xs font-bold uppercase tracking-wider text-amber-400">
-            3. Active Page Slot Editor
-          </label>
-          <span id="active-slot-indicator" class="font-mono-code text-xs text-amber-300 font-bold">PAGE 1</span>
-        </div>
-
-        <!-- Page Selector Buttons -->
-        <div id="slot-buttons-grid" class="grid grid-cols-4 gap-1.5 mb-3 font-mono-code text-xs">
-          <!-- Populated dynamically by JS -->
-        </div>
-
-        <div class="space-y-3 studio-card p-3 bg-[#0c0c0e]">
-          <div>
-            <label class="text-[11px] font-mono-code text-zinc-400">Page Headline / Title:</label>
-            <input type="text" id="slot-title-input" oninput="updateActiveSlotText(this.value)" placeholder="Enter page text..." class="w-full studio-input p-2 text-xs font-mono-code mt-1">
-          </div>
-          <div>
-            <label class="text-[11px] font-mono-code text-zinc-400">Typography Preset:</label>
-            <select id="slot-font-input" onchange="updateActiveSlotFont(this.value)" class="w-full studio-input p-1.5 text-xs font-mono-code mt-1">
-              <option value="Permanent Marker">Marker Style</option>
-              <option value="Courier Prime">Typewriter</option>
-              <option value="Playfair Display">Serif Display</option>
-              <option value="JetBrains Mono">Monospace</option>
-            </select>
-          </div>
-          <div>
-            <label class="text-[11px] font-mono-code text-zinc-400">Background Paper Tint:</label>
-            <div class="grid grid-cols-4 gap-1 mt-1 text-[10px] font-mono-code">
-              <button onclick="updateActiveSlotBg('#ffffff')" class="p-1 border border-zinc-700 bg-white text-black rounded font-bold">White</button>
-              <button onclick="updateActiveSlotBg('#faf6ee')" class="p-1 border border-zinc-700 bg-[#faf6ee] text-black rounded font-bold">Cream</button>
-              <button onclick="updateActiveSlotBg('#e3ded3')" class="p-1 border border-zinc-700 bg-[#e3ded3] text-black rounded font-bold">Kraft</button>
-              <button onclick="updateActiveSlotBg('#1a1a1a')" class="p-1 border border-zinc-700 bg-zinc-900 text-white rounded font-bold">Dark</button>
-            </div>
-          </div>
-        </div>
+      <div class="border-t border-zinc-800 pt-4 space-y-3">
+        <label class="block text-xs font-mono font-bold text-amber-400">3. Text & Content</label>
+        <input type="text" id="page-text-input" placeholder="Page Title..." class="w-full bg-[#0b0b0d] border border-zinc-800 p-2 text-xs font-mono rounded text-white">
+        <button id="btn-add-text" class="w-full bg-zinc-800 hover:bg-zinc-700 text-xs font-mono p-2 rounded">Update Page Text</button>
       </div>
     </aside>
 
-    <!-- RIGHT PANEL: Live Interactive Vector Workspace Preview -->
-    <main id="preview-panel" class="flex-1 bg-[#0a0a0c] flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      
-      <!-- Canvas Status Indicator -->
-      <div class="absolute top-4 left-4 z-20 flex items-center gap-3 bg-[#18181c] border border-zinc-800 px-3 py-1.5 rounded-md font-mono-code text-xs text-zinc-300">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span>LIVE VECTOR CANVAS PREVIEW</span>
-      </div>
-
-      <!-- Interactive SVG Sheet Workspace Container -->
-      <div id="svg-workspace-wrapper" class="w-full h-full flex items-center justify-center p-4 overflow-auto">
-        <div id="svg-container" class="shadow-2xl rounded transition-all">
-          <!-- Dynamic Scalable SVG Engine Output Here -->
-        </div>
-      </div>
+    <!-- Center Canvas Preview -->
+    <main id="preview-viewport" class="flex-1 bg-[#0a0a0c] p-6 flex items-center justify-center overflow-auto">
+      <div id="canvas-container" class="shadow-2xl"></div>
     </main>
   </div>
-</div>
 
-<!-- Fullscreen Modal View -->
-<div id="fullscreen-modal" class="fixed inset-0 bg-black/95 z-50 hidden flex-col items-center justify-center p-6 backdrop-blur-md">
-  <div class="absolute top-4 right-4 flex items-center gap-3 z-50">
-    <span class="text-xs font-mono-code text-zinc-400">Press ESC or click button to exit</span>
-    <button onclick="toggleFullscreenCanvas()" class="px-3 py-1.5 bg-amber-400 text-black font-bold font-mono-code rounded text-xs hover:bg-amber-300">
-      ✕ Close Fullscreen
-    </button>
-  </div>
-  <div id="fullscreen-svg-target" class="w-full h-full flex items-center justify-center p-4">
-    <!-- Cloned SVG for Modal View -->
-  </div>
-</div>
-
-<script>
-/**
- * NOCIV ZINE-MAKER ENGINE ARCHITECTURE
- */
-
-// 1. Central State Object
-const ZineState = {
-  preset: 'mini-8',
-  sheetWidth: 11,   // inches (Standard Letter Landscape)
-  sheetHeight: 8.5, // inches
-  bleed: 0.125,
-  margin: 0.25,
-  showGuides: true,
-  showScale: true,
-  activeSlotIndex: 0,
-  slots: [
-    { id: 1, title: 'COVER TITLE', font: 'Permanent Marker', bg: '#faf6ee', rot: 0 },
-    { id: 2, title: 'PAGE 2', font: 'Courier Prime', bg: '#ffffff', rot: 0 },
-    { id: 3, title: 'PAGE 3', font: 'Courier Prime', bg: '#ffffff', rot: 0 },
-    { id: 4, title: 'PAGE 4', font: 'Courier Prime', bg: '#ffffff', rot: 0 },
-    { id: 5, title: 'PAGE 5', font: 'JetBrains Mono', bg: '#ffffff', rot: 180 },
-    { id: 6, title: 'PAGE 6', font: 'JetBrains Mono', bg: '#ffffff', rot: 180 },
-    { id: 7, title: 'PAGE 7', font: 'JetBrains Mono', bg: '#ffffff', rot: 180 },
-    { id: 8, title: 'BACK COVER', font: 'Playfair Display', bg: '#e3ded3', rot: 180 }
-  ]
-};
-
-// Preset Definitions
-const Presets = {
-  'mini-8': {
-    name: '8-Page Micro Zine',
-    cols: 4,
-    rows: 2,
-    slotInversions: [0, 0, 0, 0, 180, 180, 180, 180],
-    slotCount: 8
-  },
-  'accordion-6': {
-    name: '6-Panel Accordion',
-    cols: 3,
-    rows: 2,
-    slotInversions: [0, 0, 0, 0, 0, 0],
-    slotCount: 6
-  },
-  'saddle-8': {
-    name: '8-Page Saddle Stitch',
-    cols: 2,
-    rows: 2,
-    slotInversions: [0, 0, 0, 0],
-    slotCount: 4
-  }
-};
-
-// 2. Vector Generator & Layout Engine
-function renderSVGCanvas() {
-  const DPI = 96; // Render DPI resolution for SVG viewport
-  const w = ZineState.sheetWidth * DPI;
-  const h = ZineState.sheetHeight * DPI;
-  const currentPreset = Presets[ZineState.preset];
-  
-  const cellW = w / currentPreset.cols;
-  const cellH = h / currentPreset.rows;
-
-  let svgHtml = `<svg id="zine-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" class="bg-white rounded shadow-2xl">`;
-
-  // Base Background
-  svgHtml += `<rect width="${w}" height="${h}" fill="#fcfbf7"/>`;
-
-  // Render Page Slots / Mockup Layout
-  ZineState.slots.forEach((slot, index) => {
-    if (index >= currentPreset.slotCount) return;
-    
-    const col = index % currentPreset.cols;
-    const row = Math.floor(index / currentPreset.cols);
-    const x = col * cellW;
-    const y = row * cellH;
-
-    const marginPx = ZineState.margin * DPI;
-    const bleedPx = ZineState.bleed * DPI;
-
-    const slotBg = slot.bg || '#ffffff';
-    const isSelected = index === ZineState.activeSlotIndex;
-
-    svgHtml += `
-      <g transform="translate(${x}, ${y})" onclick="selectSlot(${index})" class="cursor-pointer">
-        <!-- Cell Background -->
-        <rect width="${cellW}" height="${cellH}" fill="${slotBg}" stroke="${isSelected ? '#d4af37' : '#e2ded4'}" stroke-width="${isSelected ? '3' : '1'}"/>
-        
-        <!-- Bleed Boundary Indicator -->
-        ${ZineState.showGuides ? `<rect x="${bleedPx}" y="${bleedPx}" width="${cellW - (bleedPx*2)}" height="${cellH - (bleedPx*2)}" fill="none" stroke="#ef4444" stroke-width="0.5" stroke-dasharray="3,3"/>` : ''}
-
-        <!-- Margin Boundary Indicator -->
-        ${ZineState.showGuides ? `<rect x="${marginPx}" y="${marginPx}" width="${cellW - (marginPx*2)}" height="${cellH - (marginPx*2)}" fill="none" stroke="#3b82f6" stroke-width="0.5" stroke-dasharray="2,2"/>` : ''}
-
-        <!-- Slot Content with Rotation for Imposition Folding -->
-        <g transform="translate(${cellW/2}, ${cellH/2}) rotate(${slot.rot})">
-          <text text-anchor="middle" dominant-baseline="middle" font-family="${slot.font}" font-size="16" font-weight="bold" fill="${slotBg === '#1a1a1a' ? '#ffffff' : '#111111'}">
-            ${slot.title || `PAGE ${index + 1}`}
-          </text>
-          <text y="24" text-anchor="middle" dominant-baseline="middle" font-family="JetBrains Mono" font-size="9" fill="#888888">
-            [ SLOT ${index + 1} ]
-          </text>
-        </g>
-      </g>
-    `;
-  });
-
-  // Render Fold Lines & Cut Overlay Guides
-  if (ZineState.showGuides) {
-    // Outer Border Crease
-    svgHtml += `<rect width="${w}" height="${h}" fill="none" stroke="#666666" stroke-width="1"/>`;
-    
-    // Internal Fold Grid Lines
-    for (let c = 1; c < currentPreset.cols; c++) {
-      svgHtml += `<line x1="${c * cellW}" y1="0" x2="${c * cellW}" y2="${h}" stroke="#999999" stroke-width="1" stroke-dasharray="5,5"/>`;
-    }
-    for (let r = 1; r < currentPreset.rows; r++) {
-      svgHtml += `<line x1="0" y1="${r * cellH}" x2="${w}" y2="${r * cellH}" stroke="#999999" stroke-width="1" stroke-dasharray="5,5"/>`;
-    }
-
-    // Single Sheet Micro Zine Cut Line Accent (Center Horizontal Slit)
-    if (ZineState.preset === 'mini-8') {
-      const startX = cellW;
-      const endX = cellW * 3;
-      const midY = h / 2;
-      svgHtml += `<line x1="${startX}" y1="${midY}" x2="${endX}" y2="${midY}" stroke="#dc2626" stroke-width="3"/>`;
-      svgHtml += `<text x="${w/2}" y="${midY - 8}" text-anchor="middle" font-family="JetBrains Mono" font-size="10" font-weight="bold" fill="#dc2626">✂ CUT CENTER SLIT</text>`;
-    }
-  }
-
-  // Render 1-Inch Calibration Scale Bar Indicator
-  if (ZineState.showScale) {
-    const scaleX = 20;
-    const scaleY = h - 30;
-    svgHtml += `
-      <g transform="translate(${scaleX}, ${scaleY})">
-        <rect width="${DPI}" height="10" fill="#18181c" rx="2"/>
-        <text x="${DPI / 2}" y="-5" text-anchor="middle" font-family="JetBrains Mono" font-size="8" font-weight="bold" fill="#18181c">1 INCH SCALE MARKER</text>
-      </g>
-    `;
-  }
-
-  svgHtml += `</svg>`;
-  
-  document.getElementById('svg-container').innerHTML = svgHtml;
-}
-
-// 3. UI Controls & Data Flow Synchronization
-function updateSlotButtons() {
-  const container = document.getElementById('slot-buttons-grid');
-  const currentPreset = Presets[ZineState.preset];
-  let html = '';
-  
-  for (let i = 0; i < currentPreset.slotCount; i++) {
-    const active = i === ZineState.activeSlotIndex;
-    html += `
-      <button onclick="selectSlot(${i})" class="p-2 border rounded font-bold transition ${active ? 'bg-amber-400 text-black border-amber-400' : 'bg-[#18181c] border-zinc-800 text-zinc-300 hover:border-zinc-600'}">
-        P${i + 1}
-      </button>
-    `;
-  }
-  container.innerHTML = html;
-}
-
-function selectSlot(index) {
-  ZineState.activeSlotIndex = index;
-  const slot = ZineState.slots[index];
-  
-  document.getElementById('active-slot-indicator').innerText = `PAGE ${index + 1}`;
-  document.getElementById('slot-title-input').value = slot.title || '';
-  document.getElementById('slot-font-input').value = slot.font || 'Permanent Marker';
-  
-  updateSlotButtons();
-  renderSVGCanvas();
-}
-
-function updateActiveSlotText(val) {
-  ZineState.slots[ZineState.activeSlotIndex].title = val;
-  renderSVGCanvas();
-}
-
-function updateActiveSlotFont(val) {
-  ZineState.slots[ZineState.activeSlotIndex].font = val;
-  renderSVGCanvas();
-}
-
-function updateActiveSlotBg(color) {
-  ZineState.slots[ZineState.activeSlotIndex].bg = color;
-  renderSVGCanvas();
-}
-
-function updateZineParam(key, value) {
-  ZineState[key] = value;
-  renderSVGCanvas();
-}
-
-function applyPreset(presetKey) {
-  ZineState.preset = presetKey;
-  const p = Presets[presetKey];
-  
-  // Align inversions to layout standard
-  ZineState.slots.forEach((slot, idx) => {
-    slot.rot = p.slotInversions[idx] !== undefined ? p.slotInversions[idx] : 0;
-  });
-
-  ZineState.activeSlotIndex = 0;
-  updateSlotButtons();
-  selectSlot(0);
-}
-
-// Mobile Responsive View Switching
-function switchMobileTab(tab) {
-  const controls = document.getElementById('controls-panel');
-  const preview = document.getElementById('preview-panel');
-  const btnC = document.getElementById('tab-btn-controls');
-  const btnP = document.getElementById('tab-btn-preview');
-
-  if (tab === 'controls') {
-    controls.classList.remove('hidden');
-    preview.classList.add('hidden');
-    btnC.className = "px-3 py-1 rounded bg-amber-400 text-black font-bold";
-    btnP.className = "px-3 py-1 rounded text-zinc-400";
-  } else {
-    controls.classList.add('hidden');
-    preview.classList.remove('hidden');
-    preview.classList.add('flex');
-    btnP.className = "px-3 py-1 rounded bg-amber-400 text-black font-bold";
-    btnC.className = "px-3 py-1 rounded text-zinc-400";
-  }
-}
-
-// Dedicated Full-Screen Canvas Engine Mode
-function toggleFullscreenCanvas() {
-  const modal = document.getElementById('fullscreen-modal');
-  const target = document.getElementById('fullscreen-svg-target');
-
-  if (modal.classList.contains('hidden')) {
-    target.innerHTML = document.getElementById('svg-container').innerHTML;
-    const svg = target.querySelector('svg');
-    if (svg) {
-      svg.setAttribute('width', '100%');
-      svg.setAttribute('height', '100%');
-    }
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-  } else {
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-  }
-}
-
-// Escape-key Listener
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    const modal = document.getElementById('fullscreen-modal');
-    if (!modal.classList.contains('hidden')) {
-      toggleFullscreenCanvas();
-    }
-  }
-});
-
-// PDF Export Functionality
-function exportZinePDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({
-    orientation: 'landscape',
-    unit: 'in',
-    format: [ZineState.sheetWidth, ZineState.sheetHeight]
-  });
-
-  const svgElem = document.getElementById('zine-svg');
-  
-  html2canvas(document.getElementById('svg-container')).then(canvas => {
-    const imgData = canvas.toDataURL('image/png');
-    doc.addImage(imgData, 'PNG', 0, 0, ZineState.sheetWidth, ZineState.sheetHeight);
-    doc.save(`zine-layout-${ZineState.preset}.pdf`);
-  });
-}
-
-// Initial Engine Initialization
-window.addEventListener('DOMContentLoaded', () => {
-  updateSlotButtons();
-  selectSlot(0);
-});
-</script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
