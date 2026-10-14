@@ -203,6 +203,19 @@
       <p class="muted">Print at <b>100%</b> or <b>Actual size</b>, not "Fit to page".</p>
     </div>
     <div class="card">
+      <h3>Each page as its own file</h3>
+      <p class="muted">PNG pictures at 300 dots per inch. Good for posting, sharing, or a print shop. Want just the cover? Save the cover.</p>
+      <div id="pageFiles"></div>
+      <button class="big" id="allPages" style="background:var(--ink)">Save every page</button>
+    </div>
+    <div class="card" id="luluCard">
+      <h3>Print on demand (Lulu)</h3>
+      <p class="muted">Lulu prints and ships for you. They want two PDFs: the inside pages one by one, and the cover as one spread (back cover + front cover). Both get 1/8 in extra edge (bleed) on every side so nothing white shows after they trim.</p>
+      <button class="big" id="luluMake" style="background:var(--ink)">Make Lulu files</button>
+      <div id="luluFiles"></div>
+      <p class="muted">Pick 5.5 x 8.5 in (digest) and saddle stitch on Lulu. Keep words at least 1/2 in from the edges. Lulu checks your page count and files when you upload and tells you if anything needs fixing. Mini zines are too small for Lulu, use the booklet.</p>
+    </div>
+    <div class="card">
       <h3>How to fold it</h3>
       <ol class="steps" id="foldSteps"></ol>
     </div>
@@ -288,6 +301,7 @@
 <input type="file" id="photoIn" accept="image/*" hidden>
 
 <script src="qr.js"></script>
+<script src="crop.js"></script>
 <script>
 (function () {
   'use strict';
@@ -805,17 +819,19 @@
   function addShape(kind, ar) { addEl({ t: 'shape', kind: kind, ar: ar, color: ink, x: 0.5, y: R / 2, w: kind === 'line' ? 0.8 : 0.5 }); }
   $('photoIn').addEventListener('change', function () {
     var f = this.files && this.files[0]; this.value = ''; if (!f) return;
-    var replace = this.dataset.replace; this.dataset.replace = ''; var slotId = this.dataset.slot; this.dataset.slot = '';
-    var url = URL.createObjectURL(f), img = new Image();
-    img.onload = function () {
-      var k = Math.min(1, 1800 / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement('canvas');
-      c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
-      var g = c.getContext('2d'); g.drawImage(img, 0, 0, c.width, c.height);
-      var png = /png|webp|gif/.test(f.type) && hasAlpha(g, c.width, c.height), data = c.toDataURL(png ? 'image/png' : 'image/jpeg', 0.86);
-      URL.revokeObjectURL(url);
+    var replace = this.dataset.replace; this.dataset.replace = ''; var slotId = this.dataset.slot; this.dataset.slot = ''; var bgFill = this.dataset.bg; this.dataset.bg = '';
+    // pick the crop shape that fits where the photo is going
+    var rp = findEl(replace), sl0 = findEl(slotId), A = [['free', 'Free'], ['orig', 'Original'], [1, 'Square'], [1 / R, 'Page shape'], [4 / 5, '4:5'], [3 / 2, '3:2'], [16 / 9, '16:9']], def = 'free', title = 'Crop your photo';
+    if (bgFill) { A = [[1 / R, 'Full page']]; def = 1 / R; title = 'Crop to fill the page'; }
+    else if (sl0 && sl0.t === 'slot') { A = [[1 / sl0.ar, 'This spot']].concat(A); def = 1 / sl0.ar; title = 'Crop to fit the spot'; }
+    else if (rp && rp.t === 'img' && rp.mask !== 'circle') { A = [[1 / rp.ar, 'Same shape']].concat(A); def = 1 / rp.ar; }
+    window.nocivCrop(f, { aspects: A, aspect: def, title: title, maxPx: 1800 }).then(function (c) {
+      if (!c) return;
+      var g = c.getContext('2d'), png = /png|webp|gif/.test(f.type) && hasAlpha(g, c.width, c.height), data = c.toDataURL(png ? 'image/png' : 'image/jpeg', 0.86);
       var id = uid(); images[id] = data; idbSet('img:' + id, data);
       loadImg(id, data, function () {
         var ar = c.height / c.width, el = findEl(replace);
+        if (bgFill) { var bgEl = { id: uid(), t: 'img', src: id, ar: R, nar: ar, filter: 'none', mask: 'rect', frame: 'none', color: '#1d1c1a', x: 0.5, y: R / 2, w: 1, rot: 0, seed: seed() }; page().els.unshift(bgEl); selId = bgEl.id; commit(); draw(); openTool('photo'); toast('Photo background added. It sits behind everything.'); return; }
         if (el && el.t === 'img') { el.src = id; el.nar = ar; if (el.mask !== 'circle') el.ar = ar; commit(); draw(); return; }
         var sl = findEl(slotId);
         if (sl && sl.t === 'slot') { sl.t = 'img'; sl.src = id; sl.nar = ar; sl.filter = 'none'; sl.mask = 'rect'; sl.frame = sl.frame || 'none'; sl.color = '#1d1c1a'; selId = sl.id; commit(); draw(); openTool('photo'); return; }
@@ -823,9 +839,7 @@
         addEl({ t: 'img', src: id, ar: ar, nar: ar, filter: 'none', mask: 'rect', frame: 'none', color: '#1d1c1a', x: 0.5, y: R / 2, w: w });
         openTool('photo');
       });
-    };
-    img.onerror = function () { toast("Couldn't open that picture. Try a JPG or PNG."); };
-    img.src = url;
+    });
   });
   function hasAlpha(g, w, h) { try { var d = g.getImageData(0, 0, w, h).data; for (var i = 3; i < d.length; i += 4 * 97) if (d[i] < 250) return true; } catch (e) {} return false; }
   function loadImg(id, data, cb) { var im = new Image(); im.onload = function () { imgEls[id] = im; cb && cb(); draw(); }; im.src = data; }
@@ -966,6 +980,19 @@
     Z.pages.forEach(function (p) { p.els.forEach(function (e2) { if (e2.t === 'qr' && (e2.kit === 'qr' || e2.linked)) e2.str = url; if (e2.kit === 'contact') e2.str = shownLink(Z.link); }); });
     save(); draw(); thumbSoon();
   }
+  function recrop(e) {
+    var src = images[e.src]; if (!src) return;
+    window.nocivCrop(src, { aspects: [['free', 'Free'], [1 / e.ar, 'Same shape'], [1, 'Square'], [1 / R, 'Page shape'], [4 / 5, '4:5'], [3 / 2, '3:2']], aspect: 'free', title: 'Crop again', maxPx: 1800 }).then(function (c) {
+      if (!c) return; var data = c.toDataURL(/^data:image\/png/.test(src) ? 'image/png' : 'image/jpeg', 0.86), id = uid(); images[id] = data; idbSet('img:' + id, data);
+      loadImg(id, data, function () { var ar = c.height / c.width; e.src = id; e.nar = ar; if (e.mask !== 'circle' && e.w < 0.999) e.ar = ar; commit(); draw(); });
+    });
+  }
+  // Save one page as its own image, 300 dots per inch
+  function savePage(i) {
+    var wIn = Z.fmt === 'mini' ? 2.75 : 5.5, c = pageCanvas(i, Math.round(wIn * 300));
+    c.toBlob(function (b) { shareOrDownload(b, 'nociv-zine-' + slug() + '-' + pageFile(i) + '.png', 'image/png'); c.width = c.height = 0; }, 'image/png');
+  }
+  function pageFile(i) { return i === 0 ? '00-cover' : i === Z.pages.length - 1 ? (('0' + i).slice(-2) + '-back') : ('0' + i).slice(-2); }
   function buildDrawer(focusText) {
     var box = $('drawer');
     // keep the sideways scroll where it was, so the row does not jump back after every tap
@@ -984,7 +1011,7 @@
           ['frame', 'Frame', function (b) { var r = row(b); [['none', 'None'], ['white', 'White edge'], ['tape', 'Taped down']].forEach(function (m) { chip(r, m[1], e.frame === m[0], function () { setProp('frame', m[0]); buildDrawer(); }); }); }]
         ];
         if (e.filter === 'copy' || e.filter === 'dots' || e.filter === 'duo') g.push(['ink', 'Ink', function (b) { dots(b, e.color, function (c, live) { setProp('color', c, live); if (!live) buildDrawer(); }); }]);
-        g.push(['adj', 'Adjust', function (b) { adjust(b, e, [['Swap photo', function () { $('photoIn').dataset.replace = e.id; $('photoIn').click(); }], ['Fill the page', function () { e.x = 0.5; e.y = R / 2; e.rot = 0; e.mask = 'rect'; e.frame = 'none'; e.ar = R; e.w = 1; commit(); draw(); buildDrawer(); }]]); }]);
+        g.push(['adj', 'Adjust', function (b) { adjust(b, e, [['Crop', function () { recrop(e); }], ['Swap photo', function () { $('photoIn').dataset.replace = e.id; $('photoIn').click(); }], ['Fill the page', function () { e.x = 0.5; e.y = R / 2; e.rot = 0; e.mask = 'rect'; e.frame = 'none'; e.ar = R; e.w = 1; commit(); draw(); buildDrawer(); }]]); }]);
         P = panel(box, 'img', { groups: g, del: true });
       } else if (e && e.t === 'slot') {
         P = panel(box, 'slot', { del: true, groups: [
@@ -1079,21 +1106,22 @@
             t.onclick = function () { if (p.els.length && !confirm('Add this layout on top of what is already on the page?')) return; L[1]().forEach(function (e2) { e2.id = uid(); e2.seed = seed(); p.els.push(e2); }); selId = null; commit(); draw(); toast('Tap a gray photo spot to fill it'); };
           });
         }],
-        ['paper', 'Paper', function (b) {
+        ['paper', 'Background', function (b) {
           var r = row(b);
           PAPERS.forEach(function (c) { var d = el('button', 'dot'); d.style.background = c[0]; d.setAttribute('aria-label', c[1]); d.setAttribute('aria-pressed', String(p.bg === c[0])); d.onclick = function () { p.bg = c[0]; commit(); draw(); buildDrawer(); }; r.appendChild(d); });
           var cu = el('label', 'dot custom'); var inp = el('input'); inp.type = 'color'; inp.value = /^#[0-9a-f]{6}$/i.test(p.bg) ? p.bg : '#ffffff'; inp.oninput = function () { p.bg = inp.value; draw(); }; inp.onchange = function () { commit(); }; cu.appendChild(inp); r.appendChild(cu);
-          var r2 = row(b); chip(r2, 'Same paper on every page', null, function () { Z.pages.forEach(function (q) { q.bg = p.bg; q.tex = p.tex; }); commit(); buildThumbs(); draw(); toast('Done. Every page matches.'); });
+          var r2 = row(b); chip(r2, '+ Photo background', null, function () { $('photoIn').dataset.bg = '1'; $('photoIn').click(); }, 'go'); chip(r2, 'Same on every page', null, function () { Z.pages.forEach(function (q) { q.bg = p.bg; q.tex = p.tex; }); commit(); buildThumbs(); draw(); toast('Done. Every page matches.'); });
         }],
         ['tex', 'Texture', function (b) { var r = row(b); TEXTURES.forEach(function (t) { chip(r, t[1], (p.tex || 'none') === t[0], function () { p.tex = t[0]; commit(); draw(); buildDrawer(); }); }); }],
         ['this', 'This page', function (b) {
           var r = row(b);
-          chip(r, 'Move earlier', null, function () { movePage(-1); }); chip(r, 'Move later', null, function () { movePage(1); });
+          chip(r, 'Save this page', null, function () { savePage(cur); }, 'go'); chip(r, 'Move earlier', null, function () { movePage(-1); }); chip(r, 'Move later', null, function () { movePage(1); });
           chip(r, safeGuide ? 'Hide safe edge' : 'Show safe edge', null, function () { safeGuide = !safeGuide; draw(); buildDrawer(); });
           chip(r, 'Clear this page', null, function () { if (!p.els.length || confirm('Clear everything on this page?')) { p.els = []; selId = null; commit(); draw(); } }, 'warn');
           label(b, 'Keep words inside the dashed line so the printer does not trim them.');
         }]
       ];
+      pageGroups = [pageGroups[1], pageGroups[0]].concat(pageGroups.slice(2));
       P = panel(box, isBack ? 'pageBack' : 'page', { groups: isBack ? kitGroups.concat(pageGroups) : pageGroups.concat(kitGroups) });
     }
     dState = P;
@@ -1239,6 +1267,9 @@
       'Trim the edges with scissors if they stick out. Pass it on.'
     ]).forEach(function (t) { fs.appendChild(el('li', null, t)); });
     $('bindMini').hidden = Z.fmt !== 'mini';
+    var pf = $('pageFiles'); pf.innerHTML = '';
+    Z.pages.forEach(function (p, i) { var rw = el('div', 'file'), sp = el('span'); sp.textContent = (i === 0 ? 'Cover' : i === Z.pages.length - 1 ? 'Back cover' : 'Page ' + i) + ' (PNG)'; var b = el('button', null, 'Save'); b.onclick = function () { savePage(i); }; rw.appendChild(sp); rw.appendChild(b); pf.appendChild(rw); });
+    $('luluCard').hidden = Z.fmt === 'mini'; $('luluFiles').innerHTML = '';
     $('files').innerHTML = '';
   }
   document.querySelectorAll('#bindTabs [data-b]').forEach(function (b) { b.onclick = function () { document.querySelectorAll('#bindTabs [data-b]').forEach(function (o) { o.setAttribute('aria-pressed', String(o === b)); }); document.querySelectorAll('.bind').forEach(function (d) { d.hidden = d.dataset.b !== b.dataset.b; }); }; });
@@ -1282,6 +1313,42 @@
       });
     } catch (e) { $('files').innerHTML = '<p class="muted" style="color:var(--red)">That was a lot for this phone. Try again, or try on a computer.</p>'; if (window.console) console.error(e); }
     $('working').hidden = true; btn.disabled = false;
+  };
+  $('allPages').onclick = async function () {
+    var btn = this; btn.disabled = true; var wIn = Z.fmt === 'mini' ? 2.75 : 5.5, list = [];
+    try {
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      for (var i = 0; i < Z.pages.length; i++) { var c = pageCanvas(i, Math.round(wIn * 300)); var b = await new Promise(function (r) { c.toBlob(r, 'image/png'); }); list.push(new File([b], 'nociv-zine-' + slug() + '-' + pageFile(i) + '.png', { type: 'image/png' })); c.width = c.height = 0; }
+      if (matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files: list })) await navigator.share({ files: list }).catch(function () {});
+      else for (var j = 0; j < list.length; j++) { shareOrDownload(list[j], list[j].name, 'image/png'); await new Promise(function (r) { setTimeout(r, 350); }); }
+    } catch (e) { toast('That was a lot for this phone. Save pages one at a time.'); }
+    btn.disabled = false;
+  };
+  // Page with 1/8 in bleed: the page at 300 dpi, edges stretched outward so trimming never shows white
+  function bleedPage(i, dpi) {
+    var wIn = 5.5, b = Math.round(0.125 * dpi), pc = pageCanvas(i, Math.round(wIn * dpi)), W = pc.width, H = pc.height, c = document.createElement('canvas'); c.width = W + 2 * b; c.height = H + 2 * b;
+    var g = c.getContext('2d');
+    g.drawImage(pc, b, b);
+    g.drawImage(pc, 0, 0, W, 1, b, 0, W, b); g.drawImage(pc, 0, H - 1, W, 1, b, H + b, W, b);
+    g.drawImage(c, b, 0, 1, H + 2 * b, 0, 0, b, H + 2 * b); g.drawImage(c, W + b - 1, 0, 1, H + 2 * b, W + b, 0, b, H + 2 * b);
+    pc.width = pc.height = 0; return c;
+  }
+  $('luluMake').onclick = async function () {
+    var btn = this; btn.disabled = true; $('luluFiles').innerHTML = '<p class="muted">Making Lulu files...</p>';
+    try {
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      var dpi = 300, n = Z.pages.length, inner = [];
+      for (var i = 1; i < n - 1; i++) { var c = bleedPage(i, dpi); inner.push({ jpg: await toJpeg(c), pxW: c.width, pxH: c.height, wIn: 5.75, hIn: 8.75 }); c.width = c.height = 0; }
+      var back = bleedPage(n - 1, dpi), front = bleedPage(0, dpi), b = Math.round(0.125 * dpi), sp = document.createElement('canvas');
+      sp.width = back.width + front.width - 2 * b; sp.height = back.height; var g = sp.getContext('2d');
+      g.drawImage(back, 0, 0, back.width - b, back.height, 0, 0, back.width - b, back.height); g.drawImage(front, b, 0, front.width - b, front.height, back.width - b, 0, front.width - b, front.height);
+      var cover = [{ jpg: await toJpeg(sp), pxW: sp.width, pxH: sp.height, wIn: 11.25, hIn: 8.75 }]; back.width = front.width = sp.width = 0;
+      var lf = [{ name: 'nociv-zine-' + slug() + '-lulu-interior.pdf', label: 'Inside pages (' + inner.length + ' pages, 5.75 x 8.75 in with bleed)', blob: pdf(inner) }, { name: 'nociv-zine-' + slug() + '-lulu-cover.pdf', label: 'Cover spread (back + front, 11.25 x 8.75 in with bleed)', blob: pdf(cover) }];
+      $('luluFiles').innerHTML = '';
+      lf.forEach(function (f) { var rw = el('div', 'file'), s2 = el('span'); s2.textContent = f.label; var bt = el('button', null, 'Save'); bt.onclick = function () { shareOrDownload(f.blob, f.name, 'application/pdf'); }; rw.appendChild(s2); rw.appendChild(bt); $('luluFiles').appendChild(rw); });
+      window.__lulu = lf;
+    } catch (e) { $('luluFiles').innerHTML = '<p class="muted" style="color:var(--red)">That was a lot for this phone. Try again, or on a computer.</p>'; if (window.console) console.error(e); }
+    btn.disabled = false;
   };
   function shareOrDownload(blob, name, type) {
     var file = new File([blob], name, { type: type });
