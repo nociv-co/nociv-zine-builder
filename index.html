@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>Zine Builder: NOCIV.CO</title>
 <meta name="description" content="Make a zine on your phone. Photos, words, drawings, stickers. Print it on one sheet and fold it, or make a stapled booklet. Free from NOCIV.CO.">
 <style>
@@ -17,6 +17,7 @@
   :root { --paper: #efece5; --note: #f8f4e8; --ink: #1d1c1a; --soft: #6a6458; --line: #d9d2c2; --red: #c8412f; --sel: #2d6cf6; }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; overflow: hidden; background: var(--paper); color: var(--ink); }
+  html { touch-action: pan-x pan-y; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; -webkit-text-size-adjust: 100%; }
   button, input, textarea, select { font: inherit; color: inherit; }
   #app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; max-width: 980px; margin: 0 auto; }
@@ -191,6 +192,9 @@
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
+  // The page itself never zooms (the zine page has its own pinch), so nobody gets stuck zoomed in.
+  document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
+  document.addEventListener('gesturechange', function (e) { e.preventDefault(); }, { passive: false });
   var R = 4.25 / 2.75; // page height / width. Same shape for mini (2.75 x 4.25) and booklet (5.5 x 8.5)
 
   // =========================================================
