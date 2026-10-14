@@ -214,6 +214,14 @@
   var TEXTURES = [['none', 'Plain'], ['grid', 'Grid'], ['lined', 'Lined'], ['dots', 'Dots'], ['grain', 'Grain']];
   var STICKERS = [['tape', 'Tape', 0.26], ['washi', 'Washi', 0.22], ['burst', 'Burst', 1], ['stamp', 'Stamp', 0.42], ['arrow', 'Arrow', 0.55], ['circle', 'Circle it', 0.62], ['squiggle', 'Underline', 0.2], ['star', 'Star', 1], ['sparkle', 'Sparkle', 1], ['heart', 'Heart', 0.9], ['xmark', 'X', 1], ['smile', 'Smile', 1], ['barcode', 'Barcode', 0.45], ['staple', 'Staple', 0.22], ['dotblob', 'Dots', 1]];
   var LABELS = ['NEW', 'FREE', 'YES', 'WOW', 'DIY', 'PASS IT ON', 'HANDMADE', 'LIMITED', 'NO ADS', 'LOCAL'];
+  var LAYOUTS = [
+    ['Full photo', function () { return [{ t: 'slot', x: 0.5, y: R / 2, w: 1, ar: R, rot: 0 }]; }],
+    ['Photo and words', function () { return [{ t: 'slot', x: 0.5, y: R * 0.36, w: 0.84, ar: 0.95, rot: 0 }, { t: 'text', str: 'write something here', font: 'type', size: 0.065, color: '#1d1c1a', align: 'center', style: 'plain', bg: '#f2c230', x: 0.5, y: R * 0.8, w: 0.82, rot: 0 }]; }],
+    ['Two photos', function () { return [{ t: 'slot', x: 0.5, y: R * 0.27, w: 0.8, ar: 0.6, rot: -2 }, { t: 'slot', x: 0.5, y: R * 0.72, w: 0.8, ar: 0.6, rot: 2 }]; }],
+    ['Collage', function () { return [{ t: 'slot', x: 0.36, y: R * 0.27, w: 0.56, ar: 0.8, rot: -5 }, { t: 'slot', x: 0.64, y: R * 0.53, w: 0.56, ar: 0.8, rot: 4 }, { t: 'slot', x: 0.4, y: R * 0.8, w: 0.5, ar: 0.7, rot: -3 }, { t: 'sticker', kind: 'tape', ar: 0.26, x: 0.36, y: R * 0.1, w: 0.36, rot: -8, color: '#1d1c1a' }, { t: 'sticker', kind: 'tape', ar: 0.26, x: 0.7, y: R * 0.37, w: 0.36, rot: 10, color: '#1d1c1a' }]; }],
+    ['Big words', function () { return [{ t: 'text', str: 'BIG WORDS GO HERE', font: 'tall', size: 0.2, color: '#1d1c1a', align: 'left', style: 'plain', bg: '#f2c230', x: 0.5, y: R * 0.42, w: 0.86, rot: 0 }, { t: 'sticker', kind: 'squiggle', ar: 0.2, x: 0.45, y: R * 0.78, w: 0.6, rot: 0, color: '#c8412f' }]; }],
+    ['Notes page', function () { return [{ t: 'text', str: 'Dear reader,\n\nwrite your story, a recipe, a list, a rant. Whatever is on your mind.', font: 'type', size: 0.06, color: '#1d1c1a', align: 'left', style: 'plain', bg: '#f2c230', x: 0.5, y: R * 0.4, w: 0.8, rot: 0 }]; }]
+  ];
   var SHAPES = [['rect', 'Block', 0.62], ['circle', 'Circle', 1], ['scrap', 'Torn paper', 0.72], ['line', 'Line', 0.025]];
 
   // =========================================================
@@ -487,6 +495,13 @@
     else if (el.kind === 'line') { g.fillRect(-w / 2, -h / 2, w, Math.max(1, h)); }
     else g.fillRect(-w / 2, -h / 2, w, h);
   }
+  function drawSlot(g, el, s) {
+    var w = el.w * s, h = w * el.ar;
+    g.fillStyle = 'rgba(29,28,26,0.06)'; roundRect(g, -w / 2, -h / 2, w, h, Math.min(w, h) * 0.04); g.fill();
+    g.setLineDash([s / 60, s / 90]); g.strokeStyle = 'rgba(29,28,26,0.45)'; g.lineWidth = Math.max(1, s / 300); g.stroke(); g.setLineDash([]);
+    g.fillStyle = 'rgba(29,28,26,0.55)'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = fontStr('plain', Math.min(w, h) * 0.13);
+    g.fillText('+ photo', 0, 0);
+  }
   function drawEl(g, el, s, measureCtx) {
     g.save(); g.translate(el.x * s, el.y * s); g.rotate((el.rot || 0) * Math.PI / 180); g.globalAlpha = el.op == null ? 1 : el.op;
     if (el.t === 'text') { var L = textLayout(g, el, s); el._h = L.h / s; drawText(g, el, s, L); }
@@ -494,6 +509,7 @@
     else if (el.t === 'draw') { var w = el.w * s; drawStrokes(g, el.strokes, w, 0, 0); }
     else if (el.t === 'sticker') drawSticker(g, el, s);
     else if (el.t === 'shape') drawShape(g, el, s);
+    else if (el.t === 'slot') drawSlot(g, el, s);
     g.restore();
   }
   function drawBg(g, p, W, H) {
@@ -509,14 +525,14 @@
   function renderPage(g, p, W, opt) {
     opt = opt || {}; var H = W * R;
     drawBg(g, p, W, H);
-    p.els.forEach(function (el) { drawEl(g, el, W); });
+    p.els.forEach(function (el) { if (el.t === 'slot' && !opt.editor) return; drawEl(g, el, W); });
     if (opt.live && drawing) drawStrokes(g, drawing.strokes, W, 0, 0);
     if (opt.guide) {
       var m = W * 0.06; g.save(); g.setLineDash([W / 80, W / 110]); g.strokeStyle = lum(p.bg) < 0.4 ? 'rgba(255,255,255,.35)' : 'rgba(45,108,246,.35)'; g.lineWidth = Math.max(1, W / 500); g.strokeRect(m, m, W - m * 2, H - m * 2); g.restore();
     }
     if (opt.hint && !p.els.length) {
       g.fillStyle = lum(p.bg) < 0.4 ? 'rgba(255,255,255,.5)' : 'rgba(0,0,0,.32)'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = fontStr('plain', W * 0.05);
-      g.fillText('Tap Photo, Text, Draw', W / 2, H / 2 - W * 0.04); g.fillText('or Stickers to start', W / 2, H / 2 + W * 0.04);
+      g.fillText('Tap Photo, Text, Draw', W / 2, H / 2 - W * 0.08); g.fillText('or Stickers to start.', W / 2, H / 2); g.fillText('Page has quick layouts.', W / 2, H / 2 + W * 0.08);
     }
   }
 
@@ -536,7 +552,7 @@
   function drawNow() {
     if (step !== 'make' || !Z) return;
     cg.setTransform(1, 0, 0, 1, 0, 0);
-    renderPage(cg, page(), cv.width, { live: 1, guide: safeGuide, hint: 1 });
+    renderPage(cg, page(), cv.width, { live: 1, guide: safeGuide, hint: 1, editor: 1 });
     placeSel(); thumbSoon();
   }
   function placeSel() {
@@ -560,7 +576,7 @@
       box.appendChild(b); thumb(i);
     });
   }
-  function thumb(i) { var b = $('thumbs').children[i]; if (!b) return; var c = b.querySelector('canvas'), g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); renderPage(g, Z.pages[i], c.width); }
+  function thumb(i) { var b = $('thumbs').children[i]; if (!b) return; var c = b.querySelector('canvas'), g = c.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); renderPage(g, Z.pages[i], c.width, { editor: 1 }); }
   function goPage(i) {
     if (drawing) finishDraw();
     cur = Math.max(0, Math.min(Z.pages.length - 1, i)); selId = null;
@@ -602,6 +618,7 @@
     var h = e.target.dataset && e.target.dataset.h;
     if (h && el) { g0 = { t: h, el: el, w: el.w, size: el.size, rot: el.rot || 0, d: Math.hypot(p[0] - el.x, p[1] - el.y) || 0.01, a: Math.atan2(p[1] - el.y, p[0] - el.x), moved: 0 }; return; }
     var hitEl = hit(p);
+    if (hitEl && hitEl.t === 'slot') { selId = hitEl.id; if (tool !== 'photo') openTool('photo'); else buildDrawer(); g0 = { t: 'move', el: hitEl, ox: p[0] - hitEl.x, oy: p[1] - hitEl.y, moved: 0, slot: 1, sx: p[0], sy: p[1] }; draw(); return; }
     if (hitEl) {
       var now = Date.now();
       if (hitEl.t === 'text' && lastTap.id === hitEl.id && now - lastTap.t < 350) { selId = hitEl.id; openTool('text', true); lastTap = { t: 0, id: null }; return; }
@@ -617,7 +634,7 @@
     if (drawing) { var st = drawing.strokes[drawing.strokes.length - 1]; if (st && Object.keys(pts).length === 1) { st.pts.push(p); draw(); } return; }
     if (!g0) return;
     var el = g0.el, ids = Object.keys(pts);
-    if (g0.t === 'move') { el.x = p[0] - g0.ox; el.y = p[1] - g0.oy; g0.moved = 1; }
+    if (g0.t === 'move') { if (!g0.moved && g0.slot && Math.hypot(p[0] - g0.sx, p[1] - g0.sy) < 0.012) return; el.x = p[0] - g0.ox; el.y = p[1] - g0.oy; g0.moved = 1; }
     else if (g0.t === 'pinch' && ids.length >= 2) {
       var a = pts[ids[0]], b = pts[ids[1]], k = Math.hypot(a[0] - b[0], a[1] - b[1]) / g0.d;
       el.w = Math.max(0.03, Math.min(3, g0.w * k)); if (el.t === 'text') el.size = Math.max(0.01, g0.size * k);
@@ -630,9 +647,11 @@
   function endPtr(e) {
     delete pts[e.pointerId];
     if (drawing) return;
-    if (g0 && Object.keys(pts).length === 0) { if (g0.moved) commit(); g0 = null; }
+    if (g0 && Object.keys(pts).length === 0) { if (g0.moved) commit(); else if (g0.slot) pendingSlot = g0.el.id; g0 = null; }
     else if (g0 && g0.t === 'pinch' && Object.keys(pts).length === 1) { commit(); g0 = null; }
   }
+  var pendingSlot = null;
+  wrap.addEventListener('click', function () { if (pendingSlot) { $('photoIn').dataset.slot = pendingSlot; pendingSlot = null; $('photoIn').click(); } });
   wrap.addEventListener('pointerup', endPtr); wrap.addEventListener('pointercancel', endPtr);
   function snap(a) { a = ((a % 360) + 540) % 360 - 180; for (var t = -180; t <= 180; t += 90) if (Math.abs(a - t) < 4) return t === -180 ? 180 : t; return Math.round(a * 10) / 10; }
   window.addEventListener('keydown', function (e) {
@@ -647,8 +666,19 @@
   // ADDING THINGS
   // =========================================================
   function addEl(el) { el.id = uid(); el.seed = el.seed || seed(); el.rot = el.rot || 0; page().els.push(el); selId = el.id; commit(); draw(); }
-  function addText() {
-    addEl({ t: 'text', str: 'Your words', font: 'marker', size: 0.1, color: ink === '#ffffff' && lum(page().bg) > 0.5 ? '#1d1c1a' : ink, align: 'center', style: 'plain', bg: '#f2c230', x: 0.5, y: R / 2, w: 0.8 });
+  var TEXT_PRESETS = [
+    ['Headline', { str: 'BIG NEWS', font: 'tall', size: 0.18, style: 'plain', w: 0.86 }],
+    ['Caption', { str: 'a little note about this', font: 'type', size: 0.055, style: 'plain', w: 0.8 }],
+    ['Quote', { str: '"say it like you mean it"', font: 'fancy', size: 0.09, style: 'plain', w: 0.8 }],
+    ['Handwritten', { str: 'wish you were here', font: 'hand', size: 0.07, style: 'plain', w: 0.8, rot: -4 }],
+    ['Label', { str: 'LOOK', font: 'block', size: 0.08, style: 'label', w: 0.7 }],
+    ['On tape', { str: 'remember this', font: 'marker', size: 0.07, style: 'tape', w: 0.7, rot: 3 }],
+    ['Cut-out letters', { str: 'PASS IT ON', font: 'tall', size: 0.09, style: 'ransom', w: 0.85 }]
+  ];
+  function addText(preset) {
+    preset = preset || TEXT_PRESETS[0][1];
+    var color = ink === '#ffffff' && lum(page().bg) > 0.5 ? '#1d1c1a' : ink === '#1d1c1a' && lum(page().bg) < 0.4 ? '#ffffff' : ink;
+    addEl({ t: 'text', str: preset.str, font: preset.font, size: preset.size, color: color, align: 'center', style: preset.style, bg: '#f2c230', x: 0.5, y: R / 2, w: preset.w, rot: preset.rot || 0 });
     openTool('text', true);
   }
   function addSticker(kind, ar) {
@@ -658,7 +688,7 @@
   function addShape(kind, ar) { addEl({ t: 'shape', kind: kind, ar: ar, color: ink, x: 0.5, y: R / 2, w: kind === 'line' ? 0.8 : 0.5 }); }
   $('photoIn').addEventListener('change', function () {
     var f = this.files && this.files[0]; this.value = ''; if (!f) return;
-    var replace = this.dataset.replace; this.dataset.replace = '';
+    var replace = this.dataset.replace; this.dataset.replace = ''; var slotId = this.dataset.slot; this.dataset.slot = '';
     var url = URL.createObjectURL(f), img = new Image();
     img.onload = function () {
       var k = Math.min(1, 1800 / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement('canvas');
@@ -670,6 +700,8 @@
       loadImg(id, data, function () {
         var ar = c.height / c.width, el = findEl(replace);
         if (el && el.t === 'img') { el.src = id; el.nar = ar; if (el.mask !== 'circle') el.ar = ar; commit(); draw(); return; }
+        var sl = findEl(slotId);
+        if (sl && sl.t === 'slot') { sl.t = 'img'; sl.src = id; sl.nar = ar; sl.filter = 'none'; sl.mask = 'rect'; sl.frame = sl.frame || 'none'; sl.color = '#1d1c1a'; selId = sl.id; commit(); draw(); openTool('photo'); return; }
         var w = Math.min(0.8, 0.8 * R / ar / 1.2);
         addEl({ t: 'img', src: id, ar: ar, nar: ar, filter: 'none', mask: 'rect', frame: 'none', color: '#1d1c1a', x: 0.5, y: R / 2, w: w });
         openTool('photo');
@@ -711,7 +743,7 @@
     page: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg>'
   };
   var TOOLS = [['photo', 'Photo'], ['text', 'Text'], ['draw', 'Draw'], ['stickers', 'Stickers'], ['shapes', 'Shapes'], ['page', 'Page']];
-  function toolFor(el) { return { img: 'photo', text: 'text', draw: 'draw', sticker: 'stickers', shape: 'shapes' }[el.t]; }
+  function toolFor(el) { return { img: 'photo', slot: 'photo', text: 'text', draw: 'draw', sticker: 'stickers', shape: 'shapes' }[el.t]; }
   function buildTools() {
     var box = $('toolbar'); box.innerHTML = '';
     TOOLS.forEach(function (t) {
@@ -763,6 +795,10 @@
         var r4 = row(box);
         chip(r4, 'Fill the page', null, function () { e.x = 0.5; e.y = R / 2; e.rot = 0; e.mask = 'rect'; e.frame = 'none'; e.ar = R; e.w = 1; commit(); draw(); buildDrawer(); });
         chip(r4, 'Swap photo', null, function () { $('photoIn').dataset.replace = e.id; $('photoIn').click(); });
+      } else if (e && e.t === 'slot') {
+        actionsRow(box);
+        var rs2 = row(box); chip(rs2, 'Pick a photo for this spot', null, function () { $('photoIn').dataset.slot = e.id; $('photoIn').click(); }, 'go');
+        box.appendChild(el('div', 'dlabel', 'Tap the spot to pick a photo. Drag it to move it.'));
       } else {
         var r = row(box);
         chip(r, '+ Add a photo', null, function () { $('photoIn').click(); }, 'go');
@@ -787,7 +823,8 @@
         chip(ra, 'Narrower', null, function () { e.w = Math.max(0.1, e.w / 1.15); commit(); draw(); });
         if (focusText) setTimeout(function () { ta.focus(); ta.select(); }, 60);
       } else {
-        var r5 = row(box); chip(r5, '+ Add words', null, addText, 'go');
+        var r5 = row(box);
+        TEXT_PRESETS.forEach(function (tp) { var b = chip(r5, tp[0], null, function () { addText(tp[1]); }, tp[0] === 'Headline' ? 'go' : ''); if (tp[1].font && FONTS[tp[1].font]) b.style.fontFamily = FONTS[tp[1].font].css + ',' + SYS; });
         box.appendChild(el('div', 'dlabel', 'Tap words on the page to edit them. Double tap to type.'));
       }
     } else if (tool === 'draw') {
@@ -828,6 +865,13 @@
       if (!e) inkRow(box, ink, function (c) { ink = c; buildDrawer(); }, 'Color for new shapes');
     } else if (tool === 'page') {
       var p = page();
+      label(box, 'Quick layouts (tap a photo spot to fill it)'); var rq = row(box);
+      LAYOUTS.forEach(function (L) {
+        var b = el('button', 'tile'); b.setAttribute('aria-label', L[0]); var c = el('canvas'); c.width = 124; c.height = 124; b.appendChild(c); rq.appendChild(b);
+        var g = c.getContext('2d'), tw = 124 / R; g.fillStyle = '#fff'; g.fillRect((124 - tw) / 2, 0, tw, 124);
+        g.save(); g.translate((124 - tw) / 2, 0); L[1]().forEach(function (e2) { drawEl(g, Object.assign({ seed: 3 }, e2), tw); }); g.restore();
+        b.onclick = function () { if (p.els.length && !confirm('Add this layout on top of what is already on the page?')) return; L[1]().forEach(function (e2) { e2.id = uid(); e2.seed = seed(); p.els.push(e2); }); selId = null; commit(); draw(); };
+      });
       label(box, 'Paper'); var rp2 = row(box);
       PAPERS.forEach(function (c) { var b = el('button', 'dot'); b.style.background = c[0]; b.setAttribute('aria-label', c[1]); b.setAttribute('aria-pressed', String(p.bg === c[0])); b.onclick = function () { p.bg = c[0]; commit(); draw(); buildDrawer(); }; rp2.appendChild(b); });
       var cu = el('label', 'dot custom'); var inp = el('input'); inp.type = 'color'; inp.value = /^#[0-9a-f]{6}$/i.test(p.bg) ? p.bg : '#ffffff'; inp.oninput = function () { p.bg = inp.value; draw(); }; inp.onchange = function () { commit(); }; cu.appendChild(inp); rp2.appendChild(cu);
@@ -955,8 +999,9 @@
     var box = $('sheets'); box.innerHTML = '';
     var list = Z.fmt === 'mini' ? [{ c: miniSheet(60), name: 'One sheet, one side' }] : bookletSides(40);
     list.forEach(function (s) { var f = el('figure'); s.c.style.width = '100%'; f.appendChild(s.c); f.appendChild(el('figcaption', null, s.name)); box.appendChild(f); });
-    var empty = []; Z.pages.forEach(function (p, i) { if (!p.els.length) empty.push(pageName(i)); });
+    var empty = [], spots = []; Z.pages.forEach(function (p, i) { if (!p.els.some(function (e) { return e.t !== 'slot'; })) empty.push(pageName(i)); if (p.els.some(function (e) { return e.t === 'slot'; })) spots.push(pageName(i)); });
     $('emptyWarn').textContent = empty.length ? 'Heads up: ' + (empty.length === 1 ? 'page ' : 'pages ') + empty.join(', ') + (empty.length === 1 ? ' is' : ' are') + ' still empty.' : 'Every page has something on it. Nice.';
+    if (spots.length) $('emptyWarn').textContent += ' Empty photo spots on ' + spots.join(', ') + ' will print blank.';
     var fs = $('foldSteps'); fs.innerHTML = '';
     (Z.fmt === 'mini' ? [
       'Print the PDF on one sheet of letter paper, one side, at 100%.',
