@@ -230,6 +230,13 @@
       <div id="pageFiles"></div>
       <button class="big" id="allPages" style="background:var(--ink)">Save every page</button>
     </div>
+    <div class="card" id="shareCard">
+      <h3>Share what you made</h3>
+      <p class="muted">Send your cover to a friend or post it anywhere. No hashtags, no tracking.</p>
+      <label style="display:flex;gap:10px;align-items:center;font-weight:700;margin:8px 0"><input type="checkbox" id="shareMark" checked style="width:22px;height:22px"> Add "Made with nociv.co" and the link</label>
+      <button class="big" id="shareBtn">Share my zine</button>
+      <p class="muted" id="shareMsg" aria-live="polite"></p>
+    </div>
     <div class="card" id="luluCard">
       <h3>Print on demand (Lulu)</h3>
       <p class="muted">Lulu prints and ships for you. They want two PDFs: the inside pages one by one, and the cover as one spread (back cover + front cover). Both get 1/8 in extra edge (bleed) on every side so nothing white shows after they trim.</p>
@@ -1446,6 +1453,28 @@
     if (matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files: [file] })) { navigator.share({ files: [file] }).catch(function () {}); return; }
     var u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(u); }, 4000);
   }
+  // Share what you made: phone share sheet with the cover, optional "Made with nociv.co" line. Falls back to a download and a copied link.
+  (function () {
+    var KEY = 'nocivShareMark', mk = $('shareMark'), msg = $('shareMsg');
+    try { if (localStorage.getItem(KEY) === '0') mk.checked = false; } catch (e) {}
+    mk.onchange = function () { try { localStorage.setItem(KEY, mk.checked ? '1' : '0'); } catch (e) {} };
+    $('shareBtn').onclick = async function () {
+      var btn = this; btn.disabled = true; msg.textContent = 'Getting it ready...';
+      try {
+        var c = pageCanvas(0, 1400), blob = await new Promise(function (r) { c.toBlob(r, 'image/png'); }); c.width = c.height = 0;
+        var name = 'nociv-zine-' + slug() + '-cover.png', file = new File([blob], name, { type: 'image/png' }), text = 'Made with nociv.co https://nociv.co';
+        var data = { files: [file] }; if (mk.checked) data.text = text;
+        if (navigator.canShare && navigator.canShare(data)) { await navigator.share(data).catch(function () {}); msg.textContent = ''; }
+        else if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file] }).catch(function () {}); msg.textContent = ''; }
+        else {
+          var u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(u); }, 4000);
+          var copied = false; if (mk.checked) { try { await navigator.clipboard.writeText(text); copied = true; } catch (e) {} }
+          msg.textContent = 'Saved your cover.' + (copied ? ' The link is copied, paste it where you share.' : '');
+        }
+      } catch (e) { msg.textContent = 'That did not work. Try Save every page instead.'; if (window.console) console.error(e); }
+      btn.disabled = false;
+    };
+  })();
   var toastT = 0;
   function toast(t) { var d = $('toastEl'); if (!d) { d = el('div', 'toast'); d.id = 'toastEl'; document.body.appendChild(d); } d.textContent = t; d.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { d.hidden = true; }, 2200); }
 
