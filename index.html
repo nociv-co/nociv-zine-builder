@@ -144,6 +144,43 @@
   .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 9px 16px; border-radius: 999px; font-size: 0.85rem; font-weight: 700; z-index: 20; pointer-events: none; }
   [hidden] { display: none !important; }
   @media (min-width: 760px) { .stage { padding: 10px 70px; } .nav { width: 50px; } }
+
+
+
+
+/*NV-CSS-START nociv shared: console grip, slide-up sheets, press feel (one source, copied into each tool)*/
+:root{--nv-ease:cubic-bezier(.2,.8,.2,1);--nv-spring:cubic-bezier(.34,1.4,.5,1)}
+.nv-grip{position:sticky;top:0;z-index:6;height:28px;flex:none;display:grid;place-items:center;touch-action:none;cursor:grab;background:inherit;-webkit-tap-highlight-color:transparent}
+.nv-grip::before{content:"";width:44px;height:5px;border-radius:3px;background:#b9b2a2;transition:transform .2s var(--nv-spring),background .2s}
+.nv-grip:active::before{transform:scaleX(1.25);background:#1a1a1a}
+.nv-sheet{position:fixed;inset:0;z-index:20000;display:flex;flex-direction:column;justify-content:flex-end;pointer-events:none}
+.nv-sheet .nv-scrim{position:absolute;inset:0;background:rgba(20,18,12,.38);opacity:0;transition:opacity .25s}
+.nv-sheet .nv-card{position:relative;background:#f8f4e8;color:#1a1a1a;border-top:3px solid #1a1a1a;border-radius:22px 22px 0 0;padding:6px 16px calc(18px + env(safe-area-inset-bottom));max-height:86dvh;overflow-y:auto;overscroll-behavior:contain;transform:translateY(105%);transition:transform .4s var(--nv-spring);box-shadow:0 -10px 30px rgba(0,0,0,.22);font-family:inherit}
+.nv-sheet.on{pointer-events:auto}.nv-sheet.on .nv-scrim{opacity:1}.nv-sheet.on .nv-card{transform:none}
+.nv-sheet .nv-grab{width:44px;height:5px;border-radius:3px;background:#b9b2a2;margin:6px auto 10px;touch-action:none}
+.nv-sheet h3{margin:0 0 10px;font-size:1.05rem;letter-spacing:.08em;text-transform:uppercase}
+.nv-row{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:flex-start;padding:10px 0;border-top:1.5px dashed rgba(29,28,26,.2)}
+.nv-row:first-of-type{border-top:0}
+.nv-row i{flex:none;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:900;font-size:.8rem;color:#fff;background:#3f8a4a}
+.nv-row.warn i{background:#c8412f}
+.nv-row div{flex:1 1 calc(100% - 40px);min-width:0;font-size:.9rem;line-height:1.35}
+.nv-row button{flex:none;margin-left:32px;width:auto!important;padding:8px 12px!important;font-size:.8rem!important;font-weight:900;border:2px solid #1a1a1a;background:#fff;color:#1a1a1a;cursor:pointer}
+@media (prefers-reduced-motion:reduce){.nv-sheet .nv-card,.nv-grip::before{transition:none}}
+/*NV-CSS-END*/
+
+/*NV-ZINE-CSS-START*/
+#nvdock{flex:none;background:var(--paper);position:relative}
+#nvdock .nv-grip{background:var(--paper)}
+#nvdock .dock{transition:height .42s var(--nv-spring),opacity .25s;overflow:hidden}
+#nvdock .toolbar{transition:max-height .42s var(--nv-spring),padding .42s var(--nv-spring),opacity .25s;max-height:110px;overflow:hidden}
+html.cdown #nvdock .dock{height:0;opacity:0;pointer-events:none}
+html.cdown #nvdock .toolbar{max-height:0;padding-top:0;padding-bottom:0;opacity:0;border-top-width:0;pointer-events:none}
+.pagewrap{transition:transform .38s var(--nv-ease)}
+.stage.nvz{overflow:hidden}
+#nvZoom{position:absolute;left:8px;bottom:6px;z-index:5;width:42px;height:42px;border-radius:13px;border:1.5px solid var(--ink);background:#fff;color:var(--ink);display:grid;place-items:center;padding:0;cursor:pointer;box-shadow:0 2px 6px rgba(40,30,10,.15);transition:transform .18s var(--nv-spring)}
+#nvZoom:active{transform:scale(.9)}#nvZoom svg{width:22px;height:22px}
+/*NV-ZINE-CSS-END*/
+
 </style>
 </head>
 <body>
@@ -1487,7 +1524,7 @@
   if (window.ResizeObserver) new ResizeObserver(function () { fitStage(); }).observe($('stage'));
   function refreshAll() { updTitle(); if (step === 'make') { buildThumbs(); goPage(cur); } else setStep(step); }
 
-  window.__zine = { get z() { return Z; }, set z(v) { Z = v; }, images: function () { return images; }, render: drawNow, goPage: goPage, setStep: setStep, miniSheet: miniSheet, bookletSides: bookletSides, files: function () { return files; }, sel: function () { return selId; }, pageCanvas: pageCanvas, openTool: openTool };
+  window.__zine = { get z() { return Z; }, set z(v) { Z = v; }, sel: function () { return findEl(selId); }, pageName: function (i) { return pageName(i); }, pageW: function () { return pw; }, images2: function () { return imgEls; }, images: function () { return images; }, render: drawNow, goPage: goPage, setStep: setStep, miniSheet: miniSheet, bookletSides: bookletSides, files: function () { return files; }, sel: function () { return selId; }, pageCanvas: pageCanvas, openTool: openTool };
 
   idbOpen().then(function () { return idbGet('zine'); }).then(function (saved) {
     var z = null; try { z = saved ? JSON.parse(saved) : null; } catch (e) { z = null; }
@@ -1498,6 +1535,101 @@
     if (document.fonts && document.fonts.load) Promise.all(Object.keys(FONTS).filter(function (k) { return k !== 'plain'; }).map(function (k) { return document.fonts.load((FONTS[k].w || '400') + ' 40px ' + FONTS[k].css); })).then(function () { draw(); if (step === 'make') buildThumbs(); }).catch(function () {});
   });
 })();
+</script>
+<script>
+
+
+</script>
+<script>
+
+
+</script>
+<script>
+/*NV-JS-START nociv shared: tween, console grip, slide-up sheet*/
+(function(){
+  if (window.NV) return;
+  var NV = window.NV = {};
+  NV.tween = function (ms, step, done) { var t0 = performance.now(); (function f(t) { var u = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - u, 3); step(e); if (u < 1) requestAnimationFrame(f); else if (done) done(); })(t0); };
+  // A drag handle on the tools panel. Drag it down or tap it and the panel folds away so the picture fills the screen. Drag up or tap again to bring it back.
+  NV.grip = function (panel, opts) {
+    opts = opts || {}; var g = document.createElement('div'); g.className = 'nv-grip'; g.setAttribute('role', 'button'); g.setAttribute('aria-label', 'Show or hide the tools'); if (opts.after) opts.after.parentNode.insertBefore(g, opts.after.nextSibling); else panel.insertBefore(g, panel.firstChild);
+    var y0 = null, moved = false;
+    function frames() { var t0 = performance.now(); (function f(t) { if (opts.onFrame) opts.onFrame(); if (t - t0 < 560) requestAnimationFrame(f); })(t0); }
+    NV.setConsole = function (up) { var was = !document.documentElement.classList.contains('cdown'); if (was === up) return; document.documentElement.classList.toggle('cdown', !up); try { if (navigator.vibrate) navigator.vibrate(6); } catch (e) {} frames(); };
+    g.addEventListener('pointerdown', function (e) { y0 = e.clientY; moved = false; try { g.setPointerCapture(e.pointerId); } catch (_) {} });
+    g.addEventListener('pointermove', function (e) { if (y0 == null) return; var dy = e.clientY - y0; if (Math.abs(dy) > 16 && !moved) { moved = true; NV.setConsole(dy < 0); } });
+    g.addEventListener('pointerup', function () { if (y0 != null && !moved) NV.setConsole(document.documentElement.classList.contains('cdown')); y0 = null; });
+    g.addEventListener('pointercancel', function () { y0 = null; });
+    if (opts.onFrame) { window.addEventListener('resize', opts.onFrame); window.addEventListener('orientationchange', function () { setTimeout(opts.onFrame, 300); }); opts.onFrame(); }
+    return g;
+  };
+  // A sheet that slides up over a dim backdrop. NV.sheet(title, node) opens it, NV.sheetClose() closes it.
+  var sh, body, ttl;
+  function build() {
+    sh = document.createElement('div'); sh.className = 'nv-sheet'; sh.innerHTML = '<div class="nv-scrim"></div><div class="nv-card"><div class="nv-grab"></div><h3></h3><div class="nv-body"></div></div>'; document.body.appendChild(sh);
+    body = sh.querySelector('.nv-body'); ttl = sh.querySelector('h3'); sh.querySelector('.nv-scrim').addEventListener('click', NV.sheetClose);
+    var card = sh.querySelector('.nv-card'), grab = sh.querySelector('.nv-grab'), y0 = null;
+    grab.addEventListener('pointerdown', function (e) { y0 = e.clientY; try { grab.setPointerCapture(e.pointerId); } catch (_) {} });
+    grab.addEventListener('pointermove', function (e) { if (y0 != null && e.clientY - y0 > 40) { y0 = null; NV.sheetClose(); } });
+    grab.addEventListener('pointerup', function () { y0 = null; });
+  }
+  NV.sheet = function (title, node) { if (!sh) build(); ttl.textContent = title; body.innerHTML = ''; if (node) body.appendChild(node); sh.querySelector('.nv-card').scrollTop = 0; requestAnimationFrame(function () { sh.classList.add('on'); }); };
+  NV.sheetClose = function () { if (sh) sh.classList.remove('on'); };
+  NV.sheetOpen = function () { return !!(sh && sh.classList.contains('on')); };
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') NV.sheetClose(); });
+})();
+/*NV-JS-END*/
+
+/*NV-ZINE-START*/
+(function () {
+  var $ = function (x) { return document.getElementById(x); }, Zn = window.__zine;
+  // console grip: the page tools and toolbar fold away, the page grows
+  var dock = $('dock'), tb = $('toolbar');
+  if (dock && tb) {
+    var w = document.createElement('div'); w.id = 'nvdock'; dock.parentNode.insertBefore(w, dock); w.appendChild(dock); w.appendChild(tb); NV.grip(w, {});
+  }
+  // animated zoom on the page: tap the magnifier and the page eases in on the selected piece, tap again to ease back out
+  var stage = $('stage'), pg = $('pagewrap'), z = 1, btn = document.createElement('button');
+  btn.id = 'nvZoom'; btn.type = 'button'; btn.setAttribute('aria-label', 'Zoom the page');
+  var IN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.9-4.9M10.5 7.5v6M7.5 10.5h6"/></svg>', OUT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.9-4.9M7.5 10.5h6"/></svg>';
+  btn.innerHTML = IN; stage.appendChild(btn);
+  function apply(k, tx, ty) { z = k; pg.style.transform = k === 1 ? '' : 'translate(' + tx + 'px,' + ty + 'px) scale(' + k + ')'; btn.innerHTML = k === 1 ? IN : OUT; stage.classList.toggle('nvz', k !== 1); }
+  function reset() { if (z !== 1) apply(1, 0, 0); }
+  btn.onclick = function () {
+    if (z !== 1) { reset(); return; }
+    var e = Zn && Zn.sel && Zn.sel(), pw = pg.offsetWidth, ph = pg.offsetHeight, k = 2.3, cx = e ? e.x * Zn.pageW() : pw / 2, cy = e ? e.y * Zn.pageW() : ph / 2;
+    var tx = -(cx - pw / 2) * k, ty = -(cy - ph / 2) * k, mx = pw * (k - 1) / 2, my = ph * (k - 1) / 2; tx = Math.max(-mx, Math.min(mx, tx)); ty = Math.max(-my, Math.min(my, ty)); apply(k, tx, ty);
+  };
+  ['prev', 'next', 'thumbs'].forEach(function (id) { var n = $(id); if (n) n.addEventListener('click', reset, true); });
+  document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('.tab')) reset(); }, true);
+
+  // check before you make the PDF
+  var bypass = false;
+  function row(ok, text, fixes) {
+    var r = document.createElement('div'); r.className = 'nv-row' + (ok ? '' : ' warn'); r.innerHTML = '<i>' + (ok ? '✓' : '!') + '</i>'; var d = document.createElement('div'); d.textContent = text; r.appendChild(d);
+    (fixes || []).forEach(function (f) { var b = document.createElement('button'); b.type = 'button'; b.textContent = f[0]; b.onclick = function () { NV.sheetClose(); f[1](); }; r.appendChild(b); }); return r;
+  }
+  function pre() {
+    var Z = Zn.z, pin = Z.fmt === 'mini' ? 2.75 : 5.5, box = document.createElement('div'), warns = 0, empty = [], spots = [], soft = [];
+    Z.pages.forEach(function (p, i) {
+      if (!p.els.some(function (e) { return e.t !== 'slot'; })) empty.push(i);
+      if (p.els.some(function (e) { return e.t === 'slot'; })) spots.push(i);
+      p.els.forEach(function (e) { if (e.t !== 'img') return; var im = Zn.images2 && Zn.images2()[e.src]; if (!im) return; var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height; if (!iw) return; var wIn = e.w * pin, hIn = wIn * e.ar, ppi = Math.min(iw / wIn, ih / hIn); if (ppi < 200) soft.push([i, Math.round(ppi)]); });
+    });
+    var lab = function (i) { var n = Zn.pageName(i); return isNaN(+n) ? 'the ' + n.toLowerCase() : 'page ' + n; };
+    var go = function (i) { return function () { Zn.setStep('make'); Zn.goPage(i); }; };
+    if (empty.length) { warns++; box.appendChild(row(false, 'Still empty: ' + empty.map(lab).join(', ') + '. Blank pages print blank.', [['Go to ' + lab(empty[0]), go(empty[0])]])); }
+    if (spots.length) { warns++; box.appendChild(row(false, 'Empty photo spots on ' + spots.map(lab).join(', ') + ' will print blank.', [['Go to ' + lab(spots[0]), go(spots[0])]])); }
+    if (soft.length) { warns++; box.appendChild(row(false, 'A photo on ' + lab(soft[0][0]) + ' is only about ' + soft[0][1] + ' pixels per inch at the size you placed it. Under 200 usually looks soft in print (300 is the goal). Make it smaller or use a bigger photo.' + (soft.length > 1 ? ' ' + (soft.length - 1) + ' more photo' + (soft.length > 2 ? 's are' : ' is') + ' like this.' : ''), [['Go to ' + lab(soft[0][0]), go(soft[0][0])]])); }
+    if (!warns) box.appendChild(row(true, 'Every page has something on it and your photos have enough detail to print sharp.'));
+    box.appendChild(row(true, 'Print at 100% or Actual size, not Fit to page, so the fold and cuts line up.'));
+    var mk = document.createElement('button'); mk.type = 'button'; mk.className = 'big'; mk.style.marginTop = '12px'; mk.textContent = warns ? 'Make my PDF anyway' : 'Make my PDF';
+    mk.onclick = function () { NV.sheetClose(); bypass = true; $('make').click(); bypass = false; }; box.appendChild(mk); NV.sheet('Check before you print', box);
+  }
+  document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('#make'); if (!b || bypass || !Zn || !Zn.z) return; e.preventDefault(); e.stopPropagation(); pre(); }, true);
+})();
+/*NV-ZINE-END*/
+
 </script>
 </body>
 </html>
