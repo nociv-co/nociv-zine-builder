@@ -241,6 +241,15 @@ html.cdown #nvdock .toolbar{max-height:0;padding-top:0;padding-bottom:0;opacity:
 
   <!-- SET UP -->
   <div class="panel" id="setupView" hidden>
+    <div class="card" id="oldCard">
+      <h3>Already made one? Keep working on it</h3>
+      <p class="muted">Fix a page or say more without starting over. Pick one way:</p>
+      <div class="wide">
+        <label class="chip go" style="position:relative;overflow:hidden">Open a saved copy<input type="file" id="openCopy2" accept=".json,application/json" style="position:absolute;inset:0;opacity:0"></label>
+        <label class="chip" style="position:relative;overflow:hidden">Rebuild from pictures<input type="file" id="openPics" accept="image/*" multiple style="position:absolute;inset:0;opacity:0"></label>
+      </div>
+      <p class="muted"><b>Saved copy</b> brings back everything, still editable. <b>Pictures</b> is for when you only have the images: pick your 8 page pictures in order, or the one print sheet picture. Each becomes a page you can add words, stickers and photos on top of. The old words are flat, so cover them or draw over them.</p>
+    </div>
     <div class="card">
       <h3>What kind of zine?</h3>
       <div class="fmt">
@@ -280,6 +289,8 @@ html.cdown #nvdock .toolbar{max-height:0;padding-top:0;padding-bottom:0;opacity:
       <button class="big" id="make">Make my PDF</button>
       <p class="muted" id="working" hidden>Putting your pages together...</p>
       <div id="files"></div>
+      <div class="wide"><button class="chip" id="saveCopy2">Save a copy to edit later</button></div>
+      <p class="muted">Keep that copy. It is how you reopen this zine later to fix pages.</p>
       <p class="muted">Print at <b>100%</b> or <b>Actual size</b>, not "Fit to page".</p>
     </div>
     <div class="card">
@@ -1357,7 +1368,8 @@ html.cdown #nvdock .toolbar{max-height:0;padding-top:0;padding-bottom:0;opacity:
     var blob = new Blob([JSON.stringify({ nocivZine: 3, zine: Z, images: used })], { type: 'application/json' });
     shareOrDownload(blob, 'nociv-zine-' + slug() + '.json', 'application/json');
   };
-  $('openCopy').onchange = function () {
+  $('saveCopy2').onclick = function () { $('saveCopy').click(); };
+  $('openCopy').onchange = $('openCopy2').onchange = function () {
     var f = this.files[0]; this.value = ''; if (!f) return;
     var r = new FileReader();
     r.onload = function () {
@@ -1369,6 +1381,47 @@ html.cdown #nvdock .toolbar{max-height:0;padding-top:0;padding-bottom:0;opacity:
       } catch (e) { toast("That file isn't a zine from here."); }
     };
     r.readAsText(f);
+  };
+  // Rebuild a zine from pictures: page pictures in order, or one imposed print sheet
+  function fileToImg(f) { return new Promise(function (res, rej) { var u = URL.createObjectURL(f), im = new Image(); im.onload = function () { URL.revokeObjectURL(u); res(im); }; im.onerror = function () { URL.revokeObjectURL(u); rej(); }; im.src = u; }); }
+  function cropData(im, sx, sy, sw, sh, rot) {
+    var W = 1100, H = Math.round(W * R), c = document.createElement('canvas'); c.width = W; c.height = H;
+    var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
+    g.save(); if (rot) { g.translate(W, H); g.rotate(Math.PI); } g.drawImage(im, sx, sy, sw, sh, 0, 0, W, H); g.restore();
+    return c.toDataURL('image/jpeg', 0.88);
+  }
+  $('openPics').onchange = async function () {
+    var files = [].slice.call(this.files || []).sort(function (a, b) { return a.name.localeCompare(b.name, undefined, { numeric: true }); }); this.value = ''; if (!files.length) return;
+    if (!confirm('This replaces the zine on this phone with ' + (files.length === 1 ? 'pages cut from that sheet' : files.length + ' pages from your pictures') + '. Save a copy of the current one first if you want it. Go on?')) return;
+    try {
+      var datas = [], ims = [];
+      for (var i = 0; i < files.length; i++) ims.push(await fileToImg(files[i]));
+      if (ims.length === 1 && ims[0].width / ims[0].height > 1.15) {
+        // one landscape print sheet: undo the folding order (top row upside down 4,3,2,1 / bottom row 5,6,back,cover)
+        var im = ims[0], cw = im.width / 4, ch = im.height / 2, pos = {};
+        [[4, 0, 0, 1], [3, 1, 0, 1], [2, 2, 0, 1], [1, 3, 0, 1], [5, 0, 1, 0], [6, 1, 1, 0], [7, 2, 1, 0], [0, 3, 1, 0]].forEach(function (a) { pos[a[0]] = a; });
+        for (var k = 0; k < 8; k++) { var a = pos[k]; datas.push(cropData(im, a[1] * cw, a[2] * ch, cw, ch, a[3])); }
+      } else {
+        ims.forEach(function (im) {
+          // fit the picture onto a page without stretching it
+          var W = 1100, H = Math.round(W * R), c = document.createElement('canvas'); c.width = W; c.height = H; var g = c.getContext('2d');
+          g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); var sc = Math.min(W / im.width, H / im.height), w = im.width * sc, h = im.height * sc;
+          g.drawImage(im, (W - w) / 2, (H - h) / 2, w, h); datas.push(c.toDataURL('image/jpeg', 0.88));
+        });
+      }
+      var n = datas.length, fmt = n <= 8 ? 'mini' : 'booklet', count = fmt === 'mini' ? 8 : [12, 16, 20, 24].filter(function (x) { return x >= n; })[0] || 24;
+      datas = datas.slice(0, count);
+      idbClear(); images = {}; imgEls = {}; proc = {};
+      Z = newZine(fmt, count);
+      Z.pages.forEach(function (pg, i) {
+        pg.els = [];
+        if (!datas[i]) return;
+        var id = uid(); images[id] = datas[i]; idbSet('img:' + id, datas[i]); loadImg(id, datas[i]);
+        pg.els.push({ id: uid(), t: 'img', src: id, ar: R, nar: R, filter: 'none', mask: 'rect', frame: 'none', color: '#1d1c1a', x: 0.5, y: R / 2, w: 1, rot: 0, seed: seed() });
+      });
+      cur = 0; selId = null; hist = [JSON.stringify(Z)]; fut = []; save(); updUndo(); updTitle();
+      toast(n + (n === 1 ? ' picture' : ' pictures') + ' opened. Add to any page.'); setStep('make');
+    } catch (e) { toast("Couldn't read those pictures."); }
   };
   function slug() { return (Z.title || 'zine').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'zine'; }
 
